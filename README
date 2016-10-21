@@ -1,0 +1,27 @@
+stereo vision test software
+
+Requirements:
+Opencv 3.1.0 (run install.sh to install opencv 3.1.0)
+libusb-1.0 
+cyusb_linux (can be installed on Cypress websit)
+
+
+test:
+
+#compile a software to block image and send image blocks out via usb 3.0 interface
+1.bash compile.sh 50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+
+#compile a software to listen to another usb ports to read processed data
+2.bash compile.sh stream_in_to_file
+ 
+3. connect motherboard, daughterboard with 2 usb cables
+
+4. program FX3 with cyusb software, FX3 image is provided in FX3_img folder
+
+5. run stream_in_to_file, select usb bus and number
+
+6. run scanned_ESGN_50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+
+7. a Stream_IN.txt should be generated
+
+
