@@ -1628,7 +1628,7 @@ int main () {
     char vector_file_name[1024];
     char imageCounter_string[1024];
     fstream vector_file;
-    sprintf(vector_file_name, "input_datastream/stixel_1/vector_file_continuous.txt");
+    sprintf(vector_file_name, "vector_file_continuous.txt");
     vector_file.open(vector_file_name, fstream::out);
     #endif
 
