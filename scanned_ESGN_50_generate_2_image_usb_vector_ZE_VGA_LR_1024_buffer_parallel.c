@@ -211,17 +211,17 @@ void write_vectr_file_start(){
     vector_file << bitset<32>(0b11000010000000000000000000001010) << endl;//P1 10
     vector_file << bitset<32>(0b11000011000000000000000001100100) << endl;//P2 100
     vector_file << bitset<32>(0b11000100000000000000000000110001) << endl;//max_local_costs 49
-    vector_file << bitset<32>(0b11000101000000000000001100100000) << endl;//max_global_costs 1000//800
+    vector_file << bitset<32>(0b11000101000000000000001111101000) << endl;//max_global_costs 1000//800
     vector_file << bitset<32>(0b11000110000000000000000100101100) << endl;//average_cost 500//300
     vector_file << bitset<32>(0b11000111000000000000000000000000) << endl;//window_index 0
     vector_file << bitset<32>(0b11001000000000000000000000000000) << endl;//max_disp_index 0
     vector_file << bitset<32>(0b11001001000000000000001001001101) << endl;//max_img_size 589
     //SD
-    vector_file << bitset<32>(0b11001010000000000000000000001100) << endl;//"SD1
+    vector_file << bitset<32>(0b11001010000000000000000000001000) << endl;//"SD1
     vector_file << bitset<32>(0b11001011000000000000000000001100) << endl;//"SD2
-    vector_file << bitset<32>(0b11001100000000000000000000001100) << endl;//"SD3
-    vector_file << bitset<32>(0b11001101000000000000000000001100) << endl;//"SD4
-    vector_file << bitset<32>(0b11001110000000000000000000001100) << endl;//"SD5
+    vector_file << bitset<32>(0b11001100000000000000000000000100) << endl;//"SD3
+    vector_file << bitset<32>(0b11001101000000000000000000001111) << endl;//"SD4
+    vector_file << bitset<32>(0b11001110000000000000000000000100) << endl;//"SD5
     //for PLL
     vector_file << bitset<32>(0b11001111000000000000000000000000) << endl;//"pll_R
     vector_file << bitset<32>(0b11010000000000000000000000010100) << endl;//"pll_F
@@ -230,14 +230,15 @@ void write_vectr_file_start(){
     vector_file << bitset<32>(0b11010010000000000000000000000000) << endl;//pll_BS
     //can't program OD
     vector_file << bitset<32>(0b11010011000000000000000000000010) << endl;//pll_OD
-    vector_file << bitset<32>(0b11010100000000000000000000000111) << endl;//p_div
-    vector_file << bitset<32>(0b11010101000000000000000000000110) << endl;//sgm_div
+    vector_file << bitset<32>(0b11010100000000000000000000000100) << endl;//p_div
+    vector_file << bitset<32>(0b11010101000000000000000000000011) << endl;//sgm_div
     vector_file << bitset<32>(0b11010110000000000000000000000000) << endl;//pll_PD
     vector_file << bitset<32>(0b11010111000000000000000000000001) << endl;//oscEn
     vector_file << bitset<32>(0b11011000000000000000000000000001) << endl;//selpllOscb
     vector_file << bitset<32>(0b11011001000000000000000000000100) << endl;//oscTune
     vector_file << bitset<32>(0b11011010000000000000000000000100) << endl;//RO_div
     vector_file << bitset<32>(0b11011011000000000000000000000001) << endl;//int_clk_sel
+    vector_file << bitset<32>(0b11011101000000000000000000000000) << endl;//bi_dir
     #endif
 
     #ifdef MEASURE_DETAIL
