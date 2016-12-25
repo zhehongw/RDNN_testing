@@ -16,12 +16,14 @@ test:
  
 3. connect motherboard, daughterboard with 2 usb cables
 
-4. program FX3 with cyusb software, FX3 image is provided in FX3_img folder
+4. export LD_LIBRARY_PATH=/usr/local/lib/
 
-5. run stream_in_to_file, select usb bus and number
+5. program FX3 with cyusb software, FX3 image is provided in FX3_img folder
 
-6. run scanned_ESGN_50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+6. run stream_in_to_file, select usb bus and number
 
-7. a Stream_IN.txt should be generated
+7. run scanned_ESGN_50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+
+8. a Stream_IN.txt should be generated
 
 

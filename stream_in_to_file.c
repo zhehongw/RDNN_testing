@@ -397,7 +397,8 @@ void  streamIN_transfer_to_file()
     struct libusb_device_descriptor desc;
     unsigned char enum_glInEpNum=0;
 
-    ofstream ofs("streamIN_bin.txt"); // write as txt
+    ofstream ofs;
+    ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
 
     printf("\n-------------------------------------------------------------------------------------------------");  
     printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
@@ -427,7 +428,7 @@ void  streamIN_transfer_to_file()
         return;
     }
 
-    //FILE *f = fopen("streamIN_string.txt", "wb");
+    //FILE *f = fopen("streamIN_binary.txt", "wb");
 
     int last_addr;
     int write_frame;
@@ -485,10 +486,13 @@ void  streamIN_transfer_to_file()
                         //ofs << "addr: " << addr << endl;
                         //ofs << "last_addr: " << last_addr << endl;
                 }
-                if (ofs && write_frame) {
+                if (write_frame) {
+                //if (write_frame) {
                 //if (ofs) {
                     // easy way, use the stream insertion operator
-                    ofs << data_bin << endl;
+                    //ofs << data_bin << endl;
+                    ofs.write((char*)&data, sizeof(uint32_t));
+		    //fwrite(data, 1, sizeof(unsigned long), f);
                     //	ofs << header << endl;
                     //	ofs << addr << endl;
                     //	ofs << write_frame << endl;
@@ -513,7 +517,8 @@ void  streamIN_transfer_to_file()
 
      //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
      //fclose(f);
-     
+     ofs.close();
+
      //release the interface claimed earlier
      err = libusb_release_interface (dev_handle, 0);     
      if(err)

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <istream>
 #include <sstream>
 #include <vector>
 #include <stdio.h>
@@ -15,6 +16,7 @@
 //#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/core/core.hpp"
 #include "colormap.hpp"
+#include <bitset>
 
 
 using namespace std;
@@ -273,10 +275,10 @@ int main () {
     int row_shift = 0;
     int col_shift = 0;
     int image_num = 2;
-    int max_col = 14;
+    int max_col = 18;//14
 
-    int row_num = 433;
-    int col_num = 589;
+    int row_num = 480;//433
+    int col_num = 752;//589
 
 
     Mat left_gray, right_gray; 
@@ -365,12 +367,24 @@ int main () {
 
 
 
+    VideoWriter out_capture("images_JPL/depth_video.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
+
     //ifstream result_file( "output_datastream/stixel/image_000979.txt");
     //ifstream result_file( "image_000975.txt");
-    ifstream result_file( "streamIN_bin.txt");
+    ifstream result_file;
+    result_file.open("streamIN_bin.txt", ios::binary | ios::in);
     if (result_file.is_open()){
         //cout << "reading success" << endl;
-        while ( result_file >> line){
+	char line_char[4];
+        //while ( result_file >> line){
+        while ( !result_file.eof() ){
+	    result_file.read(line_char, sizeof(uint32_t));
+            uint32_t line_bin =  (uint32_t)line_char[3] << 24 & 0xFF000000| 
+                       	(uint32_t)line_char[2] << 16 & 0x00FF0000| 
+                        (uint32_t)line_char[1] << 8 & 0x0000FF00| 
+                        (uint32_t)line_char[0] & 0x000000FF;
+	    line = bitset<32>(line_bin).to_string();
+            //cout << "line string: " << line << endl;;
             line_cnt++;
             string header = line.substr(1,6);
             //cout << "header string: " << header << endl;;
@@ -399,12 +413,12 @@ int main () {
                     } else {
                         sprintf(frameCounter_string, "000000%d", frameCounter);
                     }
-                    sprintf(dispMap_string, "images/dispMap_%s.png", frameCounter_string);
-                    sprintf(dispMap_left_string, "images/dispMap_left_%s.png", frameCounter_string);
-                    sprintf(dispMap_right_string, "images/dispMap_right_%s.png", frameCounter_string);
-                    sprintf(dispMap_median_filter_string, "images/dispMap_median_filter_%s.png", frameCounter_string);
-                    sprintf(dispMap_median_filter_LR_check_string, "images/dispMap_median_filter_LR_check_%s.png", frameCounter_string);
-                    sprintf(dispMap_LR_check_color_string, "images/dispMap_LR_check_color_%s.png", frameCounter_string);
+                    sprintf(dispMap_string, "images_JPL/dispMap_%s.png", frameCounter_string);
+                    sprintf(dispMap_left_string, "images_JPL/dispMap_left_%s.png", frameCounter_string);
+                    sprintf(dispMap_right_string, "images_JPL/dispMap_right_%s.png", frameCounter_string);
+                    sprintf(dispMap_median_filter_string, "images_JPL/dispMap_median_filter_%s.png", frameCounter_string);
+                    sprintf(dispMap_median_filter_LR_check_string, "images_JPL/dispMap_median_filter_LR_check_%s.png", frameCounter_string);
+                    sprintf(dispMap_LR_check_color_string, "images_JPL/dispMap_LR_check_color_%s.png", frameCounter_string);
 
                     Mat dispMap_left(dispMap, Range(0, row_num), Range::all());
                     Mat dispMap_right_flip(dispMap, Range(row_num, 2*row_num), Range::all());
@@ -435,7 +449,7 @@ int main () {
                         }
                     }
 
-                    int LR_threshold = 3;
+                    int LR_threshold = 4;
                     for(int row = 0; row < row_num; row++){
                         for(int col = 0; col < col_num; col++){
                             if(consistency.at<uint8_t>(row, col) < LR_threshold){
@@ -510,7 +524,14 @@ int main () {
                     dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 5);
 
                     applyColorMap(dispMap_medianfilter, dispMap_LR_check_color, COLORMAP_RAINBOW);
-                    save_image(dispMap_LR_check_color_string, dispMap_LR_check_color, COLORMAP_RAINBOW);
+                    dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
+                    //save_image(dispMap_LR_check_color_string, dispMap_LR_check_color, COLORMAP_RAINBOW);
+                    //imwrite(dispMap_LR_check_color_string, dispMap_LR_check_color);
+                    out_capture.write(dispMap_LR_check_color);
+
+                    //write to video
+                    
+
 
                     //dispMap_medianfilter = median_filter(dispMap, 3);
                     //applyColorMap(dispMap_medianfilter, dispMap_color, COLORMAP_RAINBOW);
@@ -519,21 +540,21 @@ int main () {
 
 
 
-                    imwrite( dispMap_string, dispMap);                         
-                    imwrite( dispMap_left_string, dispMap_left);
-                    imwrite( dispMap_right_string, dispMap_right);
-                    imwrite( dispMap_median_filter_string, dispMap_medianfilter);
-                    imwrite( dispMap_median_filter_LR_check_string, dispMap_LRcheck);
+                    //imwrite( dispMap_string, dispMap);                         
+                    //imwrite( dispMap_left_string, dispMap_left);
+                    //imwrite( dispMap_right_string, dispMap_right);
+                    //imwrite( dispMap_median_filter_string, dispMap_medianfilter);
+                    //imwrite( dispMap_median_filter_LR_check_string, dispMap_LRcheck);
 
 
 
                  
-                    cout << "addr: " << addr << endl;;
-                    cout << "last addr: " << last_addr << endl;
-                    cout << "line: " << line_cnt << endl;
-                    cout << "new frame: " << endl;
-                    cout << "row counter: " << rowCounter << endl;
-                    cout << "col counter: " << colCounter << endl;
+                    //cout << "addr: " << addr << endl;;
+                    //cout << "last addr: " << last_addr << endl;
+                    //cout << "line: " << line_cnt << endl;
+                    //cout << "new frame: " << endl;
+                    //cout << "row counter: " << rowCounter << endl;
+                    //cout << "col counter: " << colCounter << endl;
 
                     frameCounter++;
                     //clean disp map
