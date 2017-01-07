@@ -280,7 +280,7 @@ int main () {
     int row_num = 480;//433
     int col_num = 752;//589
 
-
+    //namedWindow("Display window", WINDOW_AUTOSIZE);
     Mat left_gray, right_gray; 
     char GT_dispMap_string[1024];
     if(frameCounter < 10) {
@@ -367,7 +367,7 @@ int main () {
 
 
 
-    VideoWriter out_capture("images_JPL/depth_video.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
+    //VideoWriter out_capture("images_JPL/depth_video.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
 
     //ifstream result_file( "output_datastream/stixel/image_000979.txt");
     //ifstream result_file( "image_000975.txt");
@@ -521,13 +521,16 @@ int main () {
                     //cout << (int)Max_2 << std::endl;
                     //cout << (int)Min << std::endl;
 
-                    dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 5);
+                    dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 3);
 
                     applyColorMap(dispMap_medianfilter, dispMap_LR_check_color, COLORMAP_RAINBOW);
                     dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
                     //save_image(dispMap_LR_check_color_string, dispMap_LR_check_color, COLORMAP_RAINBOW);
                     //imwrite(dispMap_LR_check_color_string, dispMap_LR_check_color);
-                    out_capture.write(dispMap_LR_check_color);
+
+                    imshow("depth", dispMap_LR_check_color);
+                    waitKey(1);
+                    //out_capture.write(dispMap_LR_check_color);
 
                     //write to video
                     
