@@ -595,6 +595,7 @@ void  streamIN_transfer_to_display()
     string addr_bin;
     string disp_bin;
     string conf_bin;
+
     for ( int row = 0; row < dispMap.rows; row++) {
         for (int col = 0; col < dispMap.cols; col++) {
             dispMap.at<uint8_t>(row, col) = (uint8_t)127;
@@ -676,24 +677,30 @@ void  streamIN_transfer_to_display()
                 int addr = (data & 0x01FFE000) >> 13;
                 int disp = (data & 0x00000FFF) >> 5;
 
+                //cout << data_bin.to_string() << endl;;
+                //cout << disp << endl;
+
                 if(last_addr > 2490 && addr > 50 && addr < last_addr) {
                     write_frame = 1;
-                    last_addr = 0;
-                        //ofs << "addr: " << addr << endl;
-                        //ofs << "last_addr: " << last_addr << endl;
+                    //last_addr = 0;
+                        //cout << "addr: " << addr << endl;
+                        //cout << "last_addr: " << last_addr << endl;
                 } else if(last_addr > 2490 && addr > 5 && addr < last_addr && addr < 50) {
                     write_frame = 0;
-                    last_addr = 0;
-                        //ofs << "addr: " << addr << endl;
-                        //ofs << "last_addr: " << last_addr << endl;
+                    //last_addr = 0;
+                        //cout << "addr: " << addr << endl;
+                        //cout << "last_addr: " << last_addr << endl;
                 }
                 if (write_frame) {
                     //write a binary file
                     //ofs.write((char*)&data, sizeof(uint32_t));
                     //
-                    if (header == 53) { // 110101
+                    //cout << "header: " << header << endl;
+                    if (header == 117) { // 110101
                         //last frame is done
                         if(last_addr > 2490 && addr > 50 && addr < last_addr) {
+                            //cout << "display" << endl;
+                            //imshow("depth", dispMap);
                             Mat dispMap_left(dispMap, Range(0, row_num), Range::all());
                             Mat dispMap_right_flip(dispMap, Range(row_num, 2*row_num), Range::all());
                             Mat dispMap_right;
@@ -740,8 +747,8 @@ void  streamIN_transfer_to_display()
                                         Min = tmp;
                                     }
 
-                                    tmp = (int) 16 * (tmp - Min);
-                                    //tmp = 8*tmp;
+                                    //tmp = (int) 16 * (tmp - Min);
+                                    tmp = (int) 8 * tmp;
 
                                     if(0 < dispMap_LRcheck.at<uint8_t>(row, col) && dispMap_LRcheck.at<uint8_t>(row, col) < 255) { 
                                         if(tmp < 255) {
@@ -757,10 +764,16 @@ void  streamIN_transfer_to_display()
                                     } else {
                                         dispMap_LR_check_scaled.at<uint8_t>(row, col) = 255;
                                     }
-                                    //clean disp map
+                                }
+                            }
+                            /*
+                            //clean disp map
+                            for ( int row = 0; row < dispMap.rows; row++) {
+                                for (int col = 0; col < dispMap.cols; col++) {
                                     dispMap.at<uint8_t>(row, col) = (uint8_t)127;
                                 }
                             }
+                            */
 
                             //cout << (int)Min << std::endl;
 
@@ -792,13 +805,13 @@ void  streamIN_transfer_to_display()
 
                         col_shift = colCounter * (50 - overlap);
                         row_shift = rowCounter * (50 - overlap);
-                        sub_col = int(addr/50);
-                        sub_row = int(addr%50);
+                        sub_row = int(addr/50);
+                        sub_col = int(addr%50);
                         if( sub_col < (50 - overlap/2) && 
                             sub_row < (50 - overlap/2) &&
                             sub_col >= (overlap/2) &&
                             sub_row >= (overlap/2) &&
-                            sub_row + row_shift < 2 * row_num && 
+                            sub_row + row_shift < image_num * row_num && 
                             sub_col + col_shift < col_num){
 
                             dispMap.at<uint8_t>(sub_row + row_shift, sub_col + col_shift) = uint8_t(disp);

@@ -38,7 +38,7 @@ elif [ $test == "JPL_flyer_test" ]; then
 elif [ $test == "stream_in_to_file" ]; then
 	g++ -ggdb `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename $1.c .c` $1.c `pkg-config --libs libusb-1.0`
 elif [ $test == "stream_in_demo" ]; then
-	g++ -ggdb -lm -lpthread `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename $1.c .c` $1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0`
+	g++ -ggdb -lm -lpthread `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename $1.c .c` colormap.cpp $1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0`
 elif [ $test == "rectify_image" ]; then
 	g++ -ggdb `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename $1.c .c` stream_usb_vector.c $1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0`
 else
