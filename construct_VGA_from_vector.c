@@ -513,6 +513,9 @@ int main () {
                             } else {
                                 dispMap_LR_check_scaled.at<uint8_t>(row, col) = 255;
                             }
+
+                            //clean disp map
+                            dispMap.at<uint8_t>(row, col) = (uint8_t)127;
                         }
                     }
 
@@ -521,8 +524,8 @@ int main () {
                     //cout << (int)Max_2 << std::endl;
                     //cout << (int)Min << std::endl;
 
-                    dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 3);
-
+                    //dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 3);
+                    medianBlur(dispMap_LR_check_scaled, dispMap_medianfilter, 5);
                     applyColorMap(dispMap_medianfilter, dispMap_LR_check_color, COLORMAP_RAINBOW);
                     dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
                     //save_image(dispMap_LR_check_color_string, dispMap_LR_check_color, COLORMAP_RAINBOW);
@@ -560,12 +563,7 @@ int main () {
                     //cout << "col counter: " << colCounter << endl;
 
                     frameCounter++;
-                    //clean disp map
-                    for ( int row = 0; row < dispMap.rows; row++) {
-                        for (int col = 0; col < dispMap.cols; col++) {
-                            dispMap.at<uint8_t>(row, col) = (uint8_t)127;
-                        }
-                    }
+
                     sub_row = 0;
                     sub_col = 0;
                     rowCounter = 0;
@@ -574,6 +572,11 @@ int main () {
                     col_shift = 0;
                     last_addr = 0;
 
+                    dispMap_left.release();
+                    dispMap_right.release();                    
+                    consistency.release();
+                    dispMap_LRcheck.release();
+                    dispMap_LR_check_scaled.release();
                 }
 
                 //sub_dispMap.at<uint8_t>(sub_row, sub_col) = uint8_t(disp_result);
@@ -633,12 +636,14 @@ int main () {
                     }
                 }
                 last_addr = addr;
-            } else {
-                //break;
-            }
+            } 
         }
     }
     result_file.close();
 
+    dispMap.release(); 
+    dispMap_medianfilter.release();
+    sub_dispMap.release();
+    cvDestroyWindow("display");
     return 0;
 }
