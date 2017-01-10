@@ -696,36 +696,20 @@ void* GPIO_write(void *)
 void* streamOUT_transfer_parallel(void *)
 {
     int err;
-    int i;
-    int usr_choice,data_byte;
     int transffered_bytes; //actual transffered bytes
-    //struct libusb_device_descriptor desc;
-    int index;
-
     while (1) {
         transffered_bytes = 0;
         pthread_mutex_lock(&transfer_lock);
-        //printf("\nLocking shared lock");
-        //printf("\nTransffering %d bytes from HOST(PC) -> TARGET(Bulkloop device)", glOutMaxPacketSize);
         while(!transfer_buffer_prepared) {
-            //printf("wait for preparing data");
             pthread_cond_wait(&transfer_cond, &transfer_lock);
         }
-
         pthread_mutex_lock(&prepare_lock);
         while(1){
-            //err = libusb_bulk_transfer(dev_handle,glOutEpNum,out_data_buf,glOutMaxPacketSize,&transffered_bytes,1000000000); 
-            err = libusb_bulk_transfer(dev_handle,glOutEpNum,transfer_buffer,glOutMaxPacketSize * 16,&transffered_bytes,0); 
-            //err = usb_bulk_write(dev_handle, glOutEpNum, transfer_buffer, 1024, 1000);
-
-            //err = libusb_bulk_transfer(dev_handle,glOutEpNum,out_data_buf,512,&transffered_bytes,1000000000); 
+            err = libusb_bulk_transfer(dev_handle,glOutEpNum,transfer_buffer,glOutMaxPacketSize * 16,&transffered_bytes,0);  
             if(err)
             {
-                //printf("\nBytes transffres failed, err: %d transffred bytes : %d",err,transffered_bytes); 
-                //return;
             } else {
                 transfer_buffer_prepared = false;
-                //printf("\ndata transferred");
                 pthread_cond_signal(&prepare_cond);
                 pthread_mutex_unlock(&prepare_lock);
                 pthread_mutex_unlock(&transfer_lock);
@@ -735,7 +719,6 @@ void* streamOUT_transfer_parallel(void *)
     }
     return NULL;
 }
-
 
 void  streamOUT_transfer()
 {

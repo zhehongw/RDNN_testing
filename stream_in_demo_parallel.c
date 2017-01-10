@@ -35,10 +35,59 @@ using namespace cv;
 libusb_device *device;
 libusb_device_handle *dev_handle;
 
+pthread_mutex_t transfer_lock;
+pthread_cond_t transfer_cond;
+bool transfer_buffer_prepared=0;
+pthread_mutex_t prepare_lock;
+pthread_cond_t prepare_cond;
+
 unsigned char glInEpNum=0;
 unsigned char glOutEpNum=0;
 unsigned int  glInMaxPacketSize=0;
 unsigned int  glOutMaxPacketSize=0;
+int i;
+    int usr_choice,data_byte;
+    //unsigned char in_data_buf[512];
+    unsigned char in_row_buf[4];
+    struct libusb_device_descriptor desc;
+    unsigned char enum_glInEpNum=0;
+
+    //ofstream ofs;
+    //ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
+ 
+    const int subimg_rows = 50;
+    const int subimg_cols = 50;
+    const int overlap = 8;
+    const int maxdisp = 128;
+    int frameCounter = 0;
+    char frameCounter_string[1024];
+    char result_file_string[1024];
+    int rowCounter = 0;
+    int colCounter = 0;
+    int row_shift = 0;
+    int col_shift = 0;
+    int image_num = 2;
+    int max_col = 18;//14
+    int row_num = 480;//433
+    int col_num = 752;//589
+ 
+    int Min = 255;
+
+    int tmp = 0;
+    int MAX_VALUE = 230000;
+    int line_cnt = 0;
+
+    //namedWindow("Display window", WINDOW_AUTOSIZE);
+    Mat dispMap ;
+    Mat dispMap_medianfilter;
+    int addr = 0;
+    int last_addr = 0;
+    int disp;
+    int sub_row = 0;
+    int sub_col = 0;
+    string addr_bin;
+    string disp_bin;
+    string conf_bin;
 
 void save_image(const string filename, const Mat& src, int colormap) {
     Mat cm_dst;
@@ -545,120 +594,13 @@ void  streamIN_transfer_to_file()
      }
 }
 
-
-void  streamIN_transfer_to_display()
+int streamIN_transfer_to_display_process(int transffered_bytes, unsigned char *in_data_buf)
 {
-    int err;
-    int i;
-    int usr_choice,data_byte;
-    int transffered_bytes; //actual transffered bytes
-    unsigned char in_data_buf[1024 * 8];
-    //unsigned char in_data_buf[512];
-    unsigned char in_row_buf[4];
-    int index;
-    struct libusb_device_descriptor desc;
-    unsigned char enum_glInEpNum=0;
 
-    //ofstream ofs;
-    //ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
- 
-    const int subimg_rows = 50;
-    const int subimg_cols = 50;
-    const int overlap = 8;
-    const int maxdisp = 128;
-    int frameCounter = 0;
-    char frameCounter_string[1024];
-    char result_file_string[1024];
-    int rowCounter = 0;
-    int colCounter = 0;
-    int row_shift = 0;
-    int col_shift = 0;
-    int image_num = 2;
-    int max_col = 18;//14
-    int row_num = 480;//433
-    int col_num = 752;//589
- 
-    int Min = 255;
+	int write_frame;
 
-    int tmp = 0;
-    int MAX_VALUE = 230000;
-    int line_cnt = 0;
-
-    //namedWindow("Display window", WINDOW_AUTOSIZE);
-    Mat dispMap = Mat::zeros(image_num * row_num, col_num, DataType<uint8_t>::type);
-    Mat dispMap_medianfilter = Mat::zeros(image_num * row_num, col_num, DataType<uint8_t>::type);
-    int addr = 0;
-    int last_addr = 0;
-    int disp;
-    int sub_row = 0;
-    int sub_col = 0;
-    string addr_bin;
-    string disp_bin;
-    string conf_bin;
-
-    for ( int row = 0; row < dispMap.rows; row++) {
-        for (int col = 0; col < dispMap.cols; col++) {
-            dispMap.at<uint8_t>(row, col) = (uint8_t)127;
-        }
-    }
-
-    printf("\n-------------------------------------------------------------------------------------------------");  
-    printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
-    printf("\n-------------------------------------------------------------------------------------------------");      
-
-    //detect the bulkloop is running from VID/PID 
-    err = libusb_get_device_descriptor(device, &desc);
-    if (err < 0) 
-    {
-        printf("\n\tFailed to get device descriptor for the device, returning");
-        return;
-    }
-
-
-	if(get_ep_info())
-	{
-		printf("\n can not get EP Info; returning");
-        return;
-	}
-
-  
-    // While claiming the interface, interface 0 is claimed since from our bulkloop firmware we know that. 
-    err = libusb_claim_interface (dev_handle, 0);
-    if(err)
-    {
-        printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
-        return;
-    }
-
-    //FILE *f = fopen("streamIN_binary.txt", "wb");
-
-    int write_frame;
-
-    while(1) {
-
-        //printf("\n-------------------------------------------------------------------------------------------------");  
-        transffered_bytes = 0;
-        //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
-        //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
-        //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
-        err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
-        //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
-        if(err)
-        {
-
-            //printf("\nBulk IN Endpoint 0x%02x\n", glInEpNum);
-            //printf("\nTransffer failed, err: %d transffred bytes : %d",err,transffered_bytes);
-            //return;
-        }     
-    
-        /*
-        printf("\n\n------------------------------------------------------------------------------------------------------------------");
-        printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
-        printf("\n\nwriting to StreamIn.txt\n\n");
-        */
-        
-        
-        for(i=0; i < (int)transffered_bytes; i++){
+	int index;
+	 for(i=0; i < (int)transffered_bytes; i++){
 
             //printf("transferred number of bytes: %d\n", transffered_bytes);
             //fprintf(f, "%d\t", in_data_buf[i]);
@@ -828,6 +770,121 @@ void  streamIN_transfer_to_display()
                 last_addr = addr;
             }
         }
+	return 0;
+}
+
+void process_parallel(int transffered_bytes, unsigned char *in_data_buf)
+{
+	int process;
+	
+	pthread_mutex_lock(&transfer_lock);
+	while(!transfer_buffer_prepared) {
+            pthread_cond_wait(&transfer_cond, &transfer_lock);
+        }
+        pthread_mutex_lock(&prepare_lock);
+	while(1){
+	process = streamIN_transfer_to_display_process(transffered_bytes, in_data_buf);
+	if(process){}
+	else {
+		transfer_buffer_prepared = false;
+                pthread_cond_signal(&prepare_cond);
+                pthread_mutex_unlock(&prepare_lock);
+                pthread_mutex_unlock(&transfer_lock);
+                break;
+            }
+	}
+}	
+
+void  streamIN_transfer_to_display()
+{
+    int err;
+    int i;
+    int usr_choice,data_byte;
+    int transffered_bytes; //actual transffered bytes
+    unsigned char in_data_buf[1024 * 8];
+    //unsigned char in_data_buf[512];
+    unsigned char in_row_buf[4];
+    int index;
+    struct libusb_device_descriptor desc;
+    unsigned char enum_glInEpNum=0;
+
+    //ofstream ofs;
+    //ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
+
+    //namedWindow("Display window", WINDOW_AUTOSIZE);
+     dispMap = Mat::zeros(image_num * row_num, col_num, DataType<uint8_t>::type);
+     dispMap_medianfilter = Mat::zeros(image_num * row_num, col_num, DataType<uint8_t>::type);
+    string addr_bin;
+    string disp_bin;
+    string conf_bin;
+
+    for ( int row = 0; row < dispMap.rows; row++) {
+        for (int col = 0; col < dispMap.cols; col++) {
+            dispMap.at<uint8_t>(row, col) = (uint8_t)127;
+        }
+    }
+
+    printf("\n-------------------------------------------------------------------------------------------------");  
+    printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
+    printf("\n-------------------------------------------------------------------------------------------------");      
+
+    //detect the bulkloop is running from VID/PID 
+    err = libusb_get_device_descriptor(device, &desc);
+    if (err < 0) 
+    {
+        printf("\n\tFailed to get device descriptor for the device, returning");
+        return;
+    }
+
+
+	if(get_ep_info())
+	{
+		printf("\n can not get EP Info; returning");
+        return;
+	}
+
+  
+    // While claiming the interface, interface 0 is claimed since from our bulkloop firmware we know that. 
+    err = libusb_claim_interface (dev_handle, 0);
+    if(err)
+    {
+        printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
+        return;
+    }
+
+    //FILE *f = fopen("streamIN_binary.txt", "wb");
+
+    while(1) {
+
+        //printf("\n-------------------------------------------------------------------------------------------------");  
+        transffered_bytes = 0;
+        //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
+        //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
+        //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
+       // err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
+        //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
+     
+   pthread_mutex_lock(&prepare_lock);
+         while(transfer_buffer_prepared) {
+             pthread_cond_wait(&prepare_cond, &prepare_lock);
+        }
+ 
+         pthread_mutex_lock(&transfer_lock);
+        err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
+         transfer_buffer_prepared = true;
+         pthread_cond_signal(&transfer_cond);
+         pthread_mutex_unlock(&transfer_lock);
+ 
+         pthread_mutex_unlock(&prepare_lock);
+    	process_parallel(transffered_bytes, in_data_buf);
+        /*
+        printf("\n\n------------------------------------------------------------------------------------------------------------------");
+        printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
+        printf("\n\nwriting to StreamIn.txt\n\n");
+        */
+        
+        
+       
     }
 
      //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
@@ -842,307 +899,6 @@ void  streamIN_transfer_to_display()
         return;
      }
 }
-
-/*
-void process_buffer(unsigned char *in_data_buf, int transffered_bytes){
-
-    uint32_t head;
-    uint32_t addr;
-    uint32_t disp;
-    uint32_t conf;
-    int addr_int;
-    int row_addr;
-    int col_addr;
-    int last_addr_int;
-    int row_shift = 0;
-    int col_shift = 0;
-    int rowCounter = 0;
-    int colCounter = 0;
-    int max_col = 43;
-    int max_row = 25;
-    int frameCounter = 0;
-    char frame_string[1024];
-
-    while(1) { //runs a loop, never finish
-
-        //only process if mutex is locked
-
-        //iterate over all 1024 bytes
-        for(int i=0; i < (int)transffered_bytes; i++){
-            //printf("%d\t",in_data_buf[i]);
-            //fprintf(f, "%d\t", in_data_buf[i]);
-            index = i%4;
-            //in_row_buf[3 - index] = in_data_buf[i]; 
-            //fprintf_binary(f, in_data_buf[i]);
-
-            if(index == 3) {
-                data =  (uint32_t)in_data_buf[i] << 24 & 0xFF000000| 
-                        (uint32_t)in_data_buf[i-1] << 16 & 0x00FF0000| 
-                        (uint32_t)in_data_buf[i-2] << 8 & 0x0000FF00| 
-                        (uint32_t)in_data_buf[i-3] & 0x000000FF;
-                fprintf(data, "\n");
-                //fprintf_binary(f, in_data_buf[i]);
-                //fprintf_binary(f, in_data_buf[i-1]);
-                //fprintf_binary(f, in_data_buf[i-2]);
-                //fprintf_binary(f, in_data_buf[i-3]);
-                //fprintf(f, "\n");
-                head = data & 0xFC000000;
-                addr = data & 0x00FFF000;
-                disp = data & 0x00000FF0;//8
-                conf = data & 0x00000007;
-                fprintf(head, "\n");
-                fprintf(addr, "\n");
-                fprintf(disp, "\n");
-                fprintf(conf, "\n");
-
-                //construct_image
-                col_shift = colCounter * (50 - overlap);
-                row_shift = rowCounter * (50 - overlap);
-                if (head == 0xD4000000){
-                    addr_int = int(addr >> 12);
-                    row_addr = addr_int/50;
-                    col_addr = addr_int%50;
-                    if( col_addr < (50 - overlap/2) && 
-                        row_addr < (50 - overlap/2) &&
-                        col_addr >= (overlap/2) &&
-                        row_addr >= (overlap/2) &&
-                        row_addr + row_shift < image_num * Ground_truth.rows && 
-                        col_addr + col_shift < Ground_truth.cols){
-
-                        
-                        dispMap.at<uint8_t>(row_addr + row_shift, col_addr + col_shift) = uint8_t(disp_result >> 4);
-
-                        if (addr - last_addr == 2) {
-                            dispMap.at<uint8_t>(row_addr + row_shift, col_addr + col_shift - 1) = uint8_t(disp_result >> 4);
-                        }
-                    }
-
-                    if(addr < last_addr && last_addr > 2495) {
-                        colCounter++;
-                        if(colCounter == max_col) {
-                            rowCounter++;
-                            colCounter = 0;
-                            if(rowCounter == max_row) {
-                                frameCounter++;
-                                frame_string = sprintf("%d.png", frameCounter);
-                                imwrite(dispMap, frame_string);
-                                rowCounter = 0;
-                                colCounter = 0;
-                            }
-                        }
-                    }
-                    last_addr = addr;
-                }
-            }
-        }
-
-        //unlock the lock, can stream
-        
-    }
-}
-*/
-
-/*
-void  streamIN_construct_transfer_parallel()
-{
-    int err;
-    int i;
-    int usr_choice,data_byte;
-    int transffered_bytes_ping; //actual transffered bytes
-    int transffered_bytes_pong; //actual transffered bytes
-    unsigned char in_data_buf_ping[1024];
-    unsigned char in_data_buf_pong[1024];
-    //unsigned char in_data_buf[512];
-    unsigned char in_row_buf[4];
-    int index;
-    struct libusb_device_descriptor desc;
-    unsigned char enum_glInEpNum=0;
-    ping_lock = PTHREAD_MUTEX_INITIALIZER;
-    pong_lock = PTHREAD_MUTEX_INITIALIZER;
-	
-
-    printf("\n-------------------------------------------------------------------------------------------------");  
-    printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
-    printf("\n-------------------------------------------------------------------------------------------------");      
-
-    //detect the bulkloop is running from VID/PID 
-    err = libusb_get_device_descriptor(device, &desc);
-    if (err < 0) 
-    {
-        printf("\n\tFailed to get device descriptor for the device, returning");
-        return;
-    }
-
-
-	if(get_ep_info())
-	{
-		printf("\n can not get EP Info; returning");
-        return;
-	}
-
-  
-    // While claiming the interface, interface 0 is claimed since from our bulkloop firmware we know that. 
-    err = libusb_claim_interface (dev_handle, 0);
-    if(err)
-    {
-        printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
-        return;
-    }
-
-    FILE *f = fopen("streamIN.txt", "wb");
-
-    uint32_t data;
-
-    process_buffer(in_data_buf_ping, transffered_bytes_ping);
-
-    while(1) {
-
-        //printf("\n-------------------------------------------------------------------------------------------------");  
-        transffered_bytes = 0;
-        //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
-        //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
-        //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
-        if(ping is unlocked & pong is locked) {
-            err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_ping,glInMaxPacketSize,&transffered_bytes_ping,1000);
-            if(transffered_bytes_ping == 1024){
-                lock_ping;
-            }
-        } else if (pong is unlocked & ping is locked) {
-            err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_ping,glInMaxPacketSize,&transffered_bytes_ping,1000);
-            if(transffered_bytes_pong == 1024){
-                lock_pong;
-            }
-        }
-
-        //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
-        //if(err)
-        //{
-
-            //printf("\nBulk IN Endpoint 0x%02x\n", glInEpNum);
-            //printf("\nTransffer failed, err: %d transffred bytes : %d",err,transffered_bytes);
-            //return;
-        //}     
-    
-     //}
-        //printf("\n\n------------------------------------------------------------------------------------------------------------------");
-        //printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
-        //printf("\n\nwriting to StreamIn.txt\n\n");
-
-        
-
-    }
-
-     //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
-     fclose(f);
-     
-     //release the interface claimed earlier
-     err = libusb_release_interface (dev_handle, 0);     
-     if(err)
-     {
-        printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
-        return;
-     }
-}
-*/
-
-
-
-/*
-void  streamIN_construct_transfer()
-{
-    int err;
-    int i;
-    int usr_choice,data_byte;
-    int transffered_bytes_ping; //actual transffered bytes
-    int transffered_bytes_pong; //actual transffered bytes
-    unsigned char in_data_buf_ping[1024];
-    unsigned char in_data_buf_pong[1024];
-    //unsigned char in_data_buf[512];
-    unsigned char in_row_buf[4];
-    int index;
-    struct libusb_device_descriptor desc;
-    unsigned char enum_glInEpNum=0;
-    ping_lock = PTHREAD_MUTEX_INITIALIZER;
-    pong_lock = PTHREAD_MUTEX_INITIALIZER;
-	
-
-    printf("\n-------------------------------------------------------------------------------------------------");  
-    printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
-    printf("\n-------------------------------------------------------------------------------------------------");      
-
-    //detect the bulkloop is running from VID/PID 
-    err = libusb_get_device_descriptor(device, &desc);
-    if (err < 0) 
-    {
-        printf("\n\tFailed to get device descriptor for the device, returning");
-        return;
-    }
-
-
-	if(get_ep_info())
-	{
-		printf("\n can not get EP Info; returning");
-        return;
-	}
-
-  
-    // While claiming the interface, interface 0 is claimed since from our bulkloop firmware we know that. 
-    err = libusb_claim_interface (dev_handle, 0);
-    if(err)
-    {
-        printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
-        return;
-    }
-
-    FILE *f = fopen("streamIN.txt", "wb");
-
-    uint32_t data;
-
-    while(1) {
-
-        //printf("\n-------------------------------------------------------------------------------------------------");  
-        transffered_bytes = 0;
-        //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
-        //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
-        //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
-        if(pong is locked) {
-            err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_ping,glInMaxPacketSize,&transffered_bytes_ping,1000);
-        } else if (ping is locked) {
-            err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_ping,glInMaxPacketSize,&transffered_bytes_ping,1000);
-        }
-
-        //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
-        //if(err)
-        //{
-
-            //printf("\nBulk IN Endpoint 0x%02x\n", glInEpNum);
-            //printf("\nTransffer failed, err: %d transffred bytes : %d",err,transffered_bytes);
-            //return;
-        //}     
-    
-     //}
-        
-        //printf("\n\n------------------------------------------------------------------------------------------------------------------");
-        //printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
-        //printf("\n\nwriting to StreamIn.txt\n\n");
-        
-        process_buffer(in_data_buf_ping, transffered_bytes_ping);
-        
-
-    }
-
-     //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
-     fclose(f);
-     
-     //release the interface claimed earlier
-     err = libusb_release_interface (dev_handle, 0);     
-     if(err)
-     {
-        printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
-        return;
-     }
-}
-*/
 
 int main()
 {

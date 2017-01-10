@@ -1542,7 +1542,9 @@ int main () {
     float write_time = 0;
     #endif
 
-    VideoWriter out_capture("images_JPL/depth_video_input.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
+   // VideoWriter out_capture("images_JPL/depth_video_input.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
+  //  VideoWriter out_capture_left("images_JPL/depth_video_input_left.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
+  //  VideoWriter out_capture_right("images_JPL/depth_video_input_right.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
 
     //clock_t main_start = clock();
     struct timeval main_start, main_end;
@@ -1690,6 +1692,8 @@ int main () {
     int     col_counter = 0;
         
     int     start_image = 120;
+    VideoCapture leftcapture("depth_video_input_left.avi");
+    VideoCapture rightcapture("depth_video_input_right.avi");
     for(imageCounter = 0; imageCounter < 240; imageCounter++){
         
         //reset chip
@@ -1718,17 +1722,19 @@ int main () {
         clock_t total_start = clock();
         clock_t cap_start = clock();
         #endif
-
+	//Mat left_image;
+        //Mat right_image;
+	//leftcapture >> left_image;
+	//rightcapture >> right_image;
         Mat left_image = imread(left_image_string, CV_LOAD_IMAGE_GRAYSCALE);
         Mat right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
         //Mat left_image = imread(left_image_string, CV_LOAD_IMAGE_ANYDEPTH);
         //Mat right_image = imread(right_image_string, CV_LOAD_IMAGE_ANYDEPTH);
-        
+
         cv::Mat imageGrey;
         cv::Mat imageArr[] = {left_image, left_image, left_image};
         cv::merge(imageArr, 3, imageGrey);
-        out_capture.write(imageGrey);
-
+        //out_capture.write(imageGrey);
         Mat left_image_flip, right_image_flip;
         
         //imwrite("left_flip.png", left_image_flip);
