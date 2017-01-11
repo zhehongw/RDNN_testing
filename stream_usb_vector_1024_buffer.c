@@ -18,7 +18,7 @@ unsigned char buffer[1024 * 16];
 unsigned char transfer_buffer[1024 * 16];
 pthread_mutex_t transfer_lock;
 pthread_cond_t transfer_cond;
-bool transfer_buffer_prepared;
+bool transfer_buffer_prepared=0;
 pthread_mutex_t prepare_lock;
 pthread_cond_t prepare_cond;
 pthread_mutex_t cap_lock;

@@ -45,6 +45,11 @@ unsigned char glInEpNum=0;
 unsigned char glOutEpNum=0;
 unsigned int  glInMaxPacketSize=0;
 unsigned int  glOutMaxPacketSize=0;
+
+int transffered_bytes_parallel=0;
+int transffered_bytes_tmp=0;
+unsigned char in_data_buf_parallel[1024 * 8];
+unsigned char buffer_parallel[1024 * 8];
 int i;
     int usr_choice,data_byte;
     //unsigned char in_data_buf[512];
@@ -594,27 +599,26 @@ void  streamIN_transfer_to_file()
      }
 }
 
-int streamIN_transfer_to_display_process(int transffered_bytes, unsigned char *in_data_buf)
+int streamIN_transfer_to_display_process()
 {
 
 	int write_frame;
-
 	int index;
-	 for(i=0; i < (int)transffered_bytes; i++){
-
-            //printf("transferred number of bytes: %d\n", transffered_bytes);
-            //fprintf(f, "%d\t", in_data_buf[i]);
+	//cout << "process buffer" << endl;
+	 for(i=0; i < (int)transffered_bytes_tmp; i++){
+            //printf("transferred number of bytes: %d\n", transffered_bytes_parallel);
+            //fprintf(f, "%d\t", in_data_buf_parallel[i]);
             index = i%4;
-            in_row_buf[3 - index] = in_data_buf[i]; 
-            //fprintf_binary(f, in_data_buf[i]);
-
+            in_row_buf[3 - index] = buffer_parallel[i]; 
+            //fprintf_binary(f, in_data_buf_parallel[i]);
+		//cout<<"4";
             if(index == 3) {
-                uint32_t data =  (uint32_t)in_data_buf[i] << 24 & 0xFF000000| 
-                        (uint32_t)in_data_buf[i-1] << 16 & 0x00FF0000| 
-                        (uint32_t)in_data_buf[i-2] << 8 & 0x0000FF00| 
-                        (uint32_t)in_data_buf[i-3] & 0x000000FF;
+                uint32_t data =  (uint32_t)buffer_parallel[i] << 24 & 0xFF000000| 
+                        (uint32_t)buffer_parallel[i-1] << 16 & 0x00FF0000| 
+                        (uint32_t)buffer_parallel[i-2] << 8 & 0x0000FF00| 
+                        (uint32_t)buffer_parallel[i-3] & 0x000000FF;
                 bitset<32> data_bin(data);
-                
+                //cout<<"5";
                 int header = (data & 0xFE000000) >> 25;
                 int addr = (data & 0x01FFE000) >> 13;
                 int disp = (data & 0x00000FFF) >> 5;
@@ -728,7 +732,7 @@ int streamIN_transfer_to_display_process(int transffered_bytes, unsigned char *i
 
                             imshow("depth", dispMap_LR_check_color);
                             waitKey(1);
-
+		
                             sub_row = 0;
                             sub_col = 0;
                             rowCounter = 0;
@@ -744,6 +748,7 @@ int streamIN_transfer_to_display_process(int transffered_bytes, unsigned char *i
                             dispMap_LR_check_scaled.release();
 
                         }
+                        //general
 
                         col_shift = colCounter * (50 - overlap);
                         row_shift = rowCounter * (50 - overlap);
@@ -770,29 +775,36 @@ int streamIN_transfer_to_display_process(int transffered_bytes, unsigned char *i
                 last_addr = addr;
             }
         }
+	//cout << "process buffer finish" << endl;
 	return 0;
 }
 
-void process_parallel(int transffered_bytes, unsigned char *in_data_buf)
+void *process_parallel(void *)
 {
 	int process;
-	
-	pthread_mutex_lock(&transfer_lock);
-	while(!transfer_buffer_prepared) {
-            pthread_cond_wait(&transfer_cond, &transfer_lock);
-        }
-        pthread_mutex_lock(&prepare_lock);
 	while(1){
-	process = streamIN_transfer_to_display_process(transffered_bytes, in_data_buf);
-	if(process){}
-	else {
+		pthread_mutex_lock(&transfer_lock);
+		while(!transfer_buffer_prepared) {
+		    //cout << "wait for reading" << endl;
+		    pthread_cond_wait(&transfer_cond, &transfer_lock);
+		}
+        	pthread_mutex_lock(&prepare_lock);
+		//cout<<"read finish" << endl;
+		//copy
+		memcpy (buffer_parallel, in_data_buf_parallel, 8 * 1024 * sizeof(unsigned char) );
+		//cout << int(in_data_buf_parallel[1]) << int(buffer_parallel[1]) << endl;
+		transffered_bytes_tmp = transffered_bytes_parallel;
+		//process = streamIN_transfer_to_display_process();
 		transfer_buffer_prepared = false;
-                pthread_cond_signal(&prepare_cond);
-                pthread_mutex_unlock(&prepare_lock);
-                pthread_mutex_unlock(&transfer_lock);
-                break;
-            }
+		//cout << "buffer copy finish" << endl;
+		pthread_cond_signal(&prepare_cond);
+		pthread_mutex_unlock(&prepare_lock);
+		//pthread_mutex_unlock(&transfer_lock);
+		process = streamIN_transfer_to_display_process();
+		//pthread_mutex_lock(&transfer_lock);
+	
 	}
+    return NULL;
 }	
 
 void  streamIN_transfer_to_display()
@@ -800,8 +812,8 @@ void  streamIN_transfer_to_display()
     int err;
     int i;
     int usr_choice,data_byte;
-    int transffered_bytes; //actual transffered bytes
-    unsigned char in_data_buf[1024 * 8];
+    //int transffered_bytes; //actual transffered bytes
+    //unsigned char in_data_buf[1024 * 8];
     //unsigned char in_data_buf[512];
     unsigned char in_row_buf[4];
     int index;
@@ -851,39 +863,55 @@ void  streamIN_transfer_to_display()
         printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
         return;
     }
+    transfer_lock = PTHREAD_MUTEX_INITIALIZER;
+    transfer_cond = PTHREAD_COND_INITIALIZER;
+    prepare_lock = PTHREAD_MUTEX_INITIALIZER;
+    prepare_cond = PTHREAD_COND_INITIALIZER;
+    transfer_buffer_prepared = 0;
 
+    pthread_t threads_1;//transfer thread
+    int irets[8];
     //FILE *f = fopen("streamIN_binary.txt", "wb");
+    irets[1] = pthread_create(&threads_1, NULL, &process_parallel, NULL);
 
     while(1) {
 
         //printf("\n-------------------------------------------------------------------------------------------------");  
-        transffered_bytes = 0;
+        //transffered_bytes_parallel = 0;
         //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
         //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
         //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
        // err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
         //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
      
-   pthread_mutex_lock(&prepare_lock);
+         pthread_mutex_lock(&prepare_lock);
          while(transfer_buffer_prepared) {
              pthread_cond_wait(&prepare_cond, &prepare_lock);
         }
  
-         pthread_mutex_lock(&transfer_lock);
-        err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
-         transfer_buffer_prepared = true;
-         pthread_cond_signal(&transfer_cond);
-         pthread_mutex_unlock(&transfer_lock);
- 
-         pthread_mutex_unlock(&prepare_lock);
-    	process_parallel(transffered_bytes, in_data_buf);
+         //pthread_mutex_lock(&transfer_lock);
+	transffered_bytes_parallel = 0;
+         while(1){
+	    //cout<<"1"<<endl;
+            err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_parallel,glInMaxPacketSize*8,&transffered_bytes_parallel,0);
+            if(err)
+            {
+            } else {
+		//cout<<"2" << endl;
+                 transfer_buffer_prepared = true;
+                 pthread_cond_signal(&transfer_cond);
+                 pthread_mutex_unlock(&transfer_lock);
+         
+                 pthread_mutex_unlock(&prepare_lock);
+                break;
+            }
+        }
+    	//process_parallel(transffered_bytes, in_data_buf);
         /*
         printf("\n\n------------------------------------------------------------------------------------------------------------------");
         printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
         printf("\n\nwriting to StreamIn.txt\n\n");
         */
-        
-        
        
     }
 
