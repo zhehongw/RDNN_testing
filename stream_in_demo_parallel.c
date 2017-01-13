@@ -860,13 +860,7 @@ void  streamIN_transfer_to_display()
     int count=0;
     while(1) {
 
-        //printf("\n-------------------------------------------------------------------------------------------------");  
-        //transffered_bytes_parallel = 0;
-        //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
-        //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
-        //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
-       // err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
-        //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
+        
      
          pthread_mutex_lock(&prepare_lock);
          while(transfer_buffer_prepared) {
