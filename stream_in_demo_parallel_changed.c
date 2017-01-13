@@ -581,10 +581,10 @@ void *display_parallel(void *)
            pthread_cond_wait(&prepare_cond_1, &prepare_lock_1);
         }
         pthread_mutex_lock(&transfer_lock_1);
-        //cout << "lock image for display" << endl;
+        cout << "lock image for display" << endl;
 		show_image();	
         transfer_buffer_prepared_1 = false;
-        //cout << "image displayed" << endl;
+        cout << "image displayed" << endl;
         pthread_cond_signal(&transfer_cond_1);
         pthread_mutex_unlock(&transfer_lock_1);
         pthread_mutex_unlock(&prepare_lock_1);
@@ -626,17 +626,17 @@ int streamIN_transfer_to_display_process()
 
                             //imshow ("dep_raw", dispMap);
                             //waitKey(1);
-                            //cout << "reach start of new frame" << endl;
+                            cout << "reach start of new frame" << endl;
                             pthread_mutex_lock(&transfer_lock_1);
                             while(transfer_buffer_prepared_1) {
                                 pthread_cond_wait(&transfer_cond_1, &transfer_lock_1);
                             }	
                             pthread_mutex_lock(&prepare_lock_1);
-                            //cout << "copy data into display buffer" << endl;
+                            cout << "copy data into display buffer" << endl;
                             //dispMap_copy=dispMap.clone();	 
                             dispMap.copyTo(dispMap_copy);	 
                             transfer_buffer_prepared_1 = true;
-                            //cout << "signaling buffer prepared" << endl;
+                            cout << "signaling buffer prepared" << endl;
                             pthread_cond_signal(&prepare_cond_1);
                             pthread_mutex_unlock(&prepare_lock_1);
                             pthread_mutex_unlock(&transfer_lock_1);
@@ -650,12 +650,14 @@ int streamIN_transfer_to_display_process()
                             col_shift = 0;
                             last_addr = 0;
 
+                            cout << "image counter reset" << endl;
+
                         //} else {
                         //    fill_image++;
                         //}
                     }
                     if (xxx == 1){
-                    //cout << "filling a pixel" << endl;
+                    cout << "filling a pixel" << endl;
                     xxx=0;
                     }
 
@@ -699,7 +701,7 @@ void *process_parallel(void *)
 		    pthread_cond_wait(&transfer_cond, &transfer_lock);
 		}		
         //edit
-		//pthread_mutex_lock(&prepare_lock);
+		pthread_mutex_lock(&prepare_lock);
 		memcpy (buffer_parallel, in_data_buf_parallel, 8 * 1024 * sizeof(unsigned char) );
 		//cout << int(in_data_buf_parallel[1]) << int(buffer_parallel[1]) << endl;
 		transffered_bytes_tmp = transffered_bytes_parallel;
@@ -709,7 +711,7 @@ void *process_parallel(void *)
 		pthread_cond_signal(&prepare_cond);
 		pthread_mutex_unlock(&prepare_lock);
         //edit
-		//pthread_mutex_unlock(&transfer_lock);
+		pthread_mutex_unlock(&transfer_lock);
 		process = streamIN_transfer_to_display_process();
 		//pthread_mutex_lock(&transfer_lock);
 	
@@ -791,7 +793,7 @@ void  streamIN_transfer_to_display()
  
         transffered_bytes_parallel = 0;
         //edit
-        //pthread_mutex_lock(&transfer_lock);
+        pthread_mutex_lock(&transfer_lock);
         while(1){
             err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf_parallel,glInMaxPacketSize*8,&transffered_bytes_parallel,0);
             if(err)
