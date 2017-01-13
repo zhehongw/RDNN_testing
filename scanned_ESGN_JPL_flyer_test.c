@@ -1692,8 +1692,8 @@ int main () {
     int     col_counter = 0;
         
     int     start_image = 120;
-    VideoCapture leftcapture("depth_video_input_left.avi");
-    VideoCapture rightcapture("depth_video_input_right.avi");
+    //VideoCapture leftcapture("depth_video_input_left.avi");
+    //VideoCapture rightcapture("depth_video_input_right.avi");
     for(imageCounter = 0; imageCounter < 240; imageCounter++){
         
         //reset chip

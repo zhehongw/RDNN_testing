@@ -601,7 +601,7 @@ void  streamIN_transfer_to_file()
 
 int streamIN_transfer_to_display_process()
 {
-
+	
 	int write_frame;
 	int index;
 	//cout << "process buffer" << endl;
@@ -638,10 +638,6 @@ int streamIN_transfer_to_display_process()
                         //cout << "last_addr: " << last_addr << endl;
                 }
                 if (write_frame) {
-                    //write a binary file
-                    //ofs.write((char*)&data, sizeof(uint32_t));
-                    //
-                    //cout << "header: " << header << endl;
                     if (header == 117) { // 110101
                         //last frame is done
                         if(last_addr > 2490 && addr > 50 && addr < last_addr) {
@@ -712,23 +708,10 @@ int streamIN_transfer_to_display_process()
                                     }
                                 }
                             }
-                            /*
-                            //clean disp map
-                            for ( int row = 0; row < dispMap.rows; row++) {
-                                for (int col = 0; col < dispMap.cols; col++) {
-                                    dispMap.at<uint8_t>(row, col) = (uint8_t)127;
-                                }
-                            }
-                            */
-
-                            //cout << (int)Min << std::endl;
-
-                            //dispMap_medianfilter = median_filter(dispMap_LR_check_scaled, 3);
+ 
                             medianBlur(dispMap_LR_check_scaled, dispMap_medianfilter, 5);
                             applyColorMap(dispMap_medianfilter, dispMap_LR_check_color, COLORMAP_RAINBOW);
                             dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
-                            //save_image(dispMap_LR_check_color_string, dispMap_LR_check_color, COLORMAP_RAINBOW);
-                            //imwrite(dispMap_LR_check_color_string, dispMap_LR_check_color);
 
                             imshow("depth", dispMap_LR_check_color);
                             waitKey(1);
@@ -776,6 +759,7 @@ int streamIN_transfer_to_display_process()
             }
         }
 	//cout << "process buffer finish" << endl;
+	//cvDestroyWindow("depth");
 	return 0;
 }
 
@@ -873,7 +857,7 @@ void  streamIN_transfer_to_display()
     int irets[8];
     //FILE *f = fopen("streamIN_binary.txt", "wb");
     irets[1] = pthread_create(&threads_1, NULL, &process_parallel, NULL);
-
+    int count=0;
     while(1) {
 
         //printf("\n-------------------------------------------------------------------------------------------------");  
@@ -912,7 +896,8 @@ void  streamIN_transfer_to_display()
         printf("\n\nData Received: %d bytes\n\n", transffered_bytes);
         printf("\n\nwriting to StreamIn.txt\n\n");
         */
-       
+      // count++;
+      //	if(count==10000) break;
     }
 
      //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
@@ -926,10 +911,12 @@ void  streamIN_transfer_to_display()
         printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
         return;
      }
+    // cvDestroyWindow("depth");
 }
 
 int main()
 {
+    //namedWindow("depth");
     int err;
     int usr_choice;
     ssize_t cnt;  // USB device count
@@ -996,6 +983,7 @@ int main()
 					return 0;
 			case 4:
 					streamIN_transfer_to_display(); 
+		   
                     return 0;
 			case 5:
 					printf("\nExiting");
@@ -1010,6 +998,7 @@ int main()
     
     //Exit from libusb library
     libusb_exit(NULL);
+  //  cvDestroyWindow("depth");
     
     return 0;
 }
