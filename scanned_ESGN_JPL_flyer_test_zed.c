@@ -1452,8 +1452,10 @@ int main () {
 	Mat right_image(right_read, region);
 	//remap(left_image_raw, left_image_raw, rmap[k][0], rmap[k][1], INTER_LINEAR);
 	//remap(right_image_raw, right_image_raw, rmap[k][0], rmap[k][1], INTER_LINEAR);
-        imshow("left_image_raw",left_read);
+    //
+    imshow("left_image_raw",left_read);
 	imshow("right_image_raw",right_read);
+
 	//Mat left_image(left_image_raw, Range(y,y_end), Range(x, x_end));
 	//Mat right_image(right_image_raw, Range(y,y_end), Range(x, x_end));
 
@@ -1462,8 +1464,8 @@ int main () {
 	//resize(right_image, right_image, size);
 	//left_image = imread(left_image_string, CV_LOAD_IMAGE_GRAYSCALE);
 	//right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
-	imshow("left_image",left_image);
-	imshow("right_image",right_image);
+	//imshow("left_image",left_image);
+	//imshow("right_image",right_image);
         waitKey(1);
 	//cout<<"initial image done"<<endl;
         cv::Mat imageGrey;
