@@ -74,9 +74,13 @@ int colCounter = 0;
 int row_shift = 0;
 int col_shift = 0;
 int image_num = 2;
-int max_col = 18;//14
-int row_num = 480;//433
-int col_num = 752;//589
+int max_col = 14;//18
+int row_num = 433;//480
+int col_num = 589;//752
+//int max_col = 18;//18
+//int row_num = 480;//480
+//int col_num = 752;//752
+
 int Min = 255;
 int tmp = 0;
 int MAX_VALUE = 230000;
@@ -617,7 +621,6 @@ int streamIN_transfer_to_display_process()
                 write_frame = 0;
             }
 
-            int xxx=0;
             if (write_frame) {
                 if (header == 117) { // 110101
                     //last frame is done
@@ -640,7 +643,6 @@ int streamIN_transfer_to_display_process()
                             pthread_cond_signal(&prepare_cond_1);
                             pthread_mutex_unlock(&prepare_lock_1);
                             pthread_mutex_unlock(&transfer_lock_1);
-                            xxx = 1;
 
                             sub_row = 0;
                             sub_col = 0;
@@ -656,10 +658,7 @@ int streamIN_transfer_to_display_process()
                         //    fill_image++;
                         //}
                     }
-                    if (xxx == 1){
-                    //cout << "filling a pixel" << endl;
-                    xxx=0;
-                    }
+              
 
                     //general
                     col_shift = colCounter * (50 - overlap);

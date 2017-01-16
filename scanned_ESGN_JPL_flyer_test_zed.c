@@ -14,23 +14,15 @@
 #include <sys/time.h>
 #include "bulkloopapp.h"
 #include "stream_usb_vector.h"
-//
 #include "opencv/cv.h"
-//#include "cxcore.h"
-//#include "highgui.h"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-//#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-
 #include <opencv2/opencv.hpp>
 #include <pthread.h>
-
-//#define MEASURE_DETAIL
-#define WITH_BUFFER 
-//#define WRITE_FILE  
+#define WITH_BUFFER   
 
 using namespace std;
 using namespace cv;
@@ -45,48 +37,34 @@ float write_stream_time_1_1 = 0;
 float write_stream_time_1_2 = 0;
 float write_stream_time_1_0 = 0;
 float write_stream_time_2 = 0;
-
 Mat left_read, right_read;
-
-//array<char, 1754060> buffer;
-
 void to_buffer(uint32_t bin){
-    //array<char, 4> line;
     uint32_t trash = 0b11000010000000000000000000001010;
     int iner_count = _count%256;
     if(bin == 0b11011100000000000000000000000001 && iner_count > 200) {
-        //cout << "counter before insert: " << _count << endl;
         int num_zeros_to_insert = 256 - iner_count;
         while ( num_zeros_to_insert > 0 ) {
-            //insert
             for(int i = 0; i < 4; i++){
                 buffer[_count * 4 + i] = (unsigned char)(trash >> i*8) & 0xFF;
             }
             num_zeros_to_insert--;
             _count++;
         }
-        //cout << "counter after insert: " << _count << endl;
-
         //transfer current
         if(_count == 4096) {
-            //cout << "transfer" << endl;
             pthread_mutex_lock(&prepare_lock);
             while(transfer_buffer_prepared) {
-                //printf("\nwait for transferring data");
                 pthread_cond_wait(&prepare_cond, &prepare_lock);
             }
 
             pthread_mutex_lock(&transfer_lock);
-            //cout << "preparing data" << endl;
             memcpy ( transfer_buffer, buffer, 16 * 1024 * sizeof(unsigned char) );
             transfer_buffer_prepared = true;
-            //cout << "data prepared" << endl;
             //unlock for the transfer
             pthread_cond_signal(&transfer_cond);
             pthread_mutex_unlock(&transfer_lock);
 
             pthread_mutex_unlock(&prepare_lock);
-            //streamOUT_transfer_parallel();
             _count = 0;
         }
 
@@ -121,30 +99,23 @@ void to_buffer(uint32_t bin){
     for(int i = 0; i < 4; i++){
         buffer[_count * 4 + i] = (unsigned char)(bin >> i*8) & 0xFF;
     }
-    //buffer.push_back(line);
     #endif
 
     _count++;
 
     if(_count == 4096) {
-        //cout << "transfer" << endl;
         pthread_mutex_lock(&prepare_lock);
         while(transfer_buffer_prepared) {
-            //printf("\nwait for transferring data");
             pthread_cond_wait(&prepare_cond, &prepare_lock);
         }
 
         pthread_mutex_lock(&transfer_lock);
-        //cout << "preparing data" << endl;
         memcpy ( transfer_buffer, buffer, 16 * 1024 * sizeof(unsigned char) );
         transfer_buffer_prepared = true;
-        //cout << "data prepared" << endl;
         //unlock for the transfer
         pthread_cond_signal(&transfer_cond);
         pthread_mutex_unlock(&transfer_lock);
-
         pthread_mutex_unlock(&prepare_lock);
-        //streamOUT_transfer_parallel();
         _count = 0;
     }
 
@@ -180,21 +151,15 @@ void write_vectr_file_start(){
     to_buffer(0b11000110000000000000000100101100);//average_cost 500//300
     to_buffer(0b11000111000000000000000000000000);//window_index 0
     to_buffer(0b11001000000000000000000000000000);//max_disp_index 0
-    //to_buffer(0b11001001000000000000001001001101);//max_img_size 589
-    to_buffer(0b11001001000000000000001011101000);//max_img_size 589 - 8 //752-8
+    to_buffer(0b11001001000000000000001001000101);//max_img_size 589-8
+    //to_buffer(0b11001001000000000000001011101000);//max_img_size  //752-8
     //to_buffer(0b11001001000000000000011110000000);//max_img_size 1920
     //to_buffer(0b11001001000000000000011100000010);//max_img_size 1794
     //SD
-    //to_buffer(0b11001010000000000000000000001100);//"SD1 //1111
-    //to_buffer(0b11001011000000000000000000001100);//"SD2 /1000
-    //to_buffer(0b11001100000000000000000000000100);//"SD3 //1000
-    //to_buffer(0b11001101000000000000000000001111);//"SD4 //10010
-    //to_buffer(0b11001110000000000000000000000100);//"SD5 /1100
-
-    to_buffer(0b11001010000000000000000000001111);//"SD1 //1111
-    to_buffer(0b11001011000000000000000000001000);//"SD2 /1000 //1100
-    to_buffer(0b11001100000000000000000000001000);//"SD3 //1000 //0100    //read
-    to_buffer(0b11001101000000000000000000001000);//"SD4 //10010 //1111   //write
+    to_buffer(0b11001010000000000000000000001100);//"SD1 //1111
+    to_buffer(0b11001011000000000000000000001100);//"SD2 /1000 //1100
+    to_buffer(0b11001100000000000000000000000100);//"SD3 //1000 //0100    //read
+    to_buffer(0b11001101000000000000000000010000);//"SD4 //10010 //1111   //write
     to_buffer(0b11001110000000000000000000000100);//"SD5 /1100 //0100     //write end
     //for PLL
     to_buffer(0b11001111000000000000000000000000);//"pll_R
@@ -204,8 +169,8 @@ void write_vectr_file_start(){
     to_buffer(0b11010010000000000000000000000000);//pll_BS
     //can't program OD
     to_buffer(0b11010011000000000000000000000010);//pll_OD
-    to_buffer(0b11010100000000000000000000000011);//p_div
-    to_buffer(0b11010101000000000000000000000010);//sgm_div
+    to_buffer(0b11010100000000000000000000000100);//p_div
+    to_buffer(0b11010101000000000000000000000011);//sgm_div
     to_buffer(0b11010110000000000000000000000000);//pll_PD
     to_buffer(0b11010111000000000000000000000001);//oscEn
     to_buffer(0b11011000000000000000000000000001);//selpllOscb
@@ -225,7 +190,7 @@ void write_vectr_file_start(){
     //SD
     vector_file << bitset<32>(0b11001010000000000000000000001000) << endl;//"SD1
     vector_file << bitset<32>(0b11001011000000000000000000001100) << endl;//"SD2
-    vector_file << bitset<32>(0b11001100000000000000000000000100) << endl;//"SD3
+    vector_file << bitset<32>(0b11001100000000000000000000000110) << endl;//"SD3
     vector_file << bitset<32>(0b11001101000000000000000000001111) << endl;//"SD4
     vector_file << bitset<32>(0b11001110000000000000000000000100) << endl;//"SD5
     //for PLL
@@ -262,21 +227,13 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
     int col_num = 0;
     const int num_of_bits = 12;
 
-    //string bin_pixel_0;
-    //string bin_pixel_1;
-    //string bin_pixel_2;
-    //string bin_pixel_3;
-    //string bin_pixel_4;
-
     string output_string_1;
     string output_string_2;
 
     //left
     if(((row_counter == 0 && col_counter == 0) || (row_counter == 0 && col_counter == 1)) && frameCounter == 0){
-       // cout << "first" << endl;
     }
     else{
-        //string control_result_string = "1100000111100" + to_string(result_mem_even) + "000000" + "000000" + "000000"; //control write left
         if(row_counter == 0 && col_counter == 2 && (frameCounter % 1 == 0)) { //transfer one outstanding packet
             uint32_t control_result = 0;
 
@@ -307,9 +264,7 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
 
         for(int m = 0; m < 6; m++) {
             to_buffer(control_result); 
-        }
-
-        //to_buffer(control_result); 
+        } 
         #ifdef WRITE_FILE
         vector_file << bitset<32>(control_result) << endl;
         #endif
@@ -322,9 +277,6 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
         #ifdef MEASURE_DETAIL
         clock_t write_stream_start_1_0 = clock();
         #endif
-
-        //string bin_row_num = bitset<6>(col_num).to_string();
-        //string control_left_string = "1100000011011" + to_string(image_mem_even) + "000000" + bin_row_num + "010011"; //control write right
         
         uint32_t control_left = 0;
         control_left = control_left |
@@ -351,13 +303,7 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
 
             uint32_t out_1 = 0;
             uint32_t out_2 = 0;
-            /*
-            bin_pixel_0 = bitset<num_of_bits>(left_image.at<uint8_t>(5 * i + 0, col_num)).to_string();
-            bin_pixel_1 = bitset<num_of_bits>(left_image.at<uint8_t>(5 * i + 1, col_num)).to_string();
-            bin_pixel_2 = bitset<num_of_bits>(left_image.at<uint8_t>(5 * i + 2, col_num)).to_string();
-            bin_pixel_3 = bitset<num_of_bits>(left_image.at<uint8_t>(5 * i + 3, col_num)).to_string();
-            bin_pixel_4 = bitset<num_of_bits>(left_image.at<uint8_t>(5 * i + 4, col_num)).to_string();
-            */
+       
             out_1 = out_1 | 
                 left_image.at<uint8_t>(5 * i + 0, col_num) |
                 ((uint32_t)left_image.at<uint8_t>(5 * i + 1, col_num) << num_of_bits) |
@@ -374,19 +320,12 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
             clock_t write_stream_end_1_1 = clock();
             write_stream_time_1_1 += (float)(write_stream_end_1_1 - write_stream_start_1_1)/CLOCKS_PER_SEC;
             #endif
-
-            /*
-            output_string_1 = "10"+ bin_pixel_2.substr(6, 6) + bin_pixel_1 + bin_pixel_0;
-            output_string_2 = "10" + bin_pixel_4 + bin_pixel_3 + bin_pixel_2.substr(0, 6);
-            */
-
-            #ifdef MEASURE_DETAIL
+	    #ifdef MEASURE_DETAIL
             clock_t write_stream_start_1_2 = clock();
             #endif
             to_buffer(out_1);
             to_buffer(out_2);
             #ifdef WRITE_FILE
-            //cout << bitset<32>(out_1) << endl;
             vector_file << bitset<32>(out_1) << endl;
             vector_file << bitset<32>(out_2) << endl;
             #endif
@@ -405,9 +344,6 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
         #ifdef MEASURE_DETAIL
         clock_t write_stream_start_1_0 = clock();
         #endif
-        //string bin_row_num = bitset<6>(col_num).to_string();
-        //string control_right_string = "1100000011010" + to_string(image_mem_even) + "000000" + bin_row_num + "010011"; //control write right
-        
         uint32_t control_right = 0;
         control_right = control_right |
             (0b1100000011010 << 19) |
@@ -434,16 +370,7 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
 
             uint32_t out_1 = 0;
             uint32_t out_2 = 0;
-
-            /*
-            bin_pixel_0 = bitset<num_of_bits>(right_image.at<uint8_t>(5 * i + 0, col_num)).to_string();
-            bin_pixel_1 = bitset<num_of_bits>(right_image.at<uint8_t>(5 * i + 1, col_num)).to_string();
-            bin_pixel_2 = bitset<num_of_bits>(right_image.at<uint8_t>(5 * i + 2, col_num)).to_string();
-            bin_pixel_3 = bitset<num_of_bits>(right_image.at<uint8_t>(5 * i + 3, col_num)).to_string();
-            bin_pixel_4 = bitset<num_of_bits>(right_image.at<uint8_t>(5 * i + 4, col_num)).to_string();
-            */
-
-            out_1 = out_1 | 
+	    out_1 = out_1 | 
                 right_image.at<uint8_t>(5 * i + 0, col_num) |
                 ((uint32_t)right_image.at<uint8_t>(5 * i + 1, col_num) << num_of_bits)|
                 (((uint32_t)right_image.at<uint8_t>(5 * i + 2, col_num) & 0x3F) << 2*num_of_bits) |
@@ -461,9 +388,6 @@ void write_vector_file_stream(Mat &left_image, Mat &right_image, int frameCounte
 
             clock_t write_stream_start_1_2 = clock();
         #endif
-
-            //output_string_1 = "10"+ bin_pixel_2.substr(6, 6) + bin_pixel_1 + bin_pixel_0;
-            //output_string_2 = "10" + bin_pixel_4 + bin_pixel_3 + bin_pixel_2.substr(0, 6);
             to_buffer(out_1);
             to_buffer(out_2);
             #ifdef WRITE_FILE
@@ -883,30 +807,10 @@ void write_test_image_mem(Mat &left_image, Mat &right_image, int frameCounter, i
     sprintf(col_counter_string, "%d", col_counter);
     sprintf(left_raw_string, "input_mem/stixel_0/left_image_%s_row_%s_col_%s.mem", frameCounter_string, row_counter_string, col_counter_string);
     sprintf(right_raw_string, "input_mem/stixel_0/right_image_%s_row_%s_col_%s.mem", frameCounter_string, row_counter_string, col_counter_string);
-    /*
-    if(even) {
-        sprintf(left_img_mem_0_string, "input_buffer/stixel_0/left_image_mem_%s_row_%s_col_%s_even_1_0.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(left_img_mem_1_string, "input_buffer/stixel_0/left_image_mem_%s_row_%s_col_%s_even_1_1.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(right_img_mem_0_string, "input_buffer/stixel_0/right_image_mem_%s_row_%s_col_%s_even_1_0.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(right_img_mem_1_string, "input_buffer/stixel_0/right_image_mem_%s_row_%s_col_%s_even_1_1.mem", frameCounter_string, row_counter_string, col_counter_string);
-    } else {
-        sprintf(left_img_mem_0_string, "input_buffer/stixel_0/left_image_mem_%s_row_%s_col_%s_even_0_0.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(left_img_mem_1_string, "input_buffer/stixel_0/left_image_mem_%s_row_%s_col_%s_even_0_1.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(right_img_mem_0_string, "input_buffer/stixel_0/right_image_mem_%s_row_%s_col_%s_even_0_0.mem", frameCounter_string, row_counter_string, col_counter_string);
-        sprintf(right_img_mem_1_string, "input_buffer/stixel_0/right_image_mem_%s_row_%s_col_%s_even_0_1.mem", frameCounter_string, row_counter_string, col_counter_string);
-    }
-    */
-    //ofstream left_mem_0_file;
-    //ofstream left_mem_1_file;
-    //ofstream right_mem_0_file;
-    //ofstream right_mem_1_file;
+    
     ofstream left_raw_mem_file;
     ofstream right_raw_mem_file;
 
-    //left_mem_0_file.open (left_img_mem_0_string);
-    //left_mem_1_file.open (left_img_mem_1_string);
-    //right_mem_0_file.open (right_img_mem_0_string);
-    //right_mem_1_file.open (right_img_mem_1_string);
     left_raw_mem_file.open (left_raw_string);
     right_raw_mem_file.open (right_raw_string);
      
@@ -938,94 +842,6 @@ void write_test_image_mem(Mat &left_image, Mat &right_image, int frameCounter, i
         right_raw_mem_file << endl;
     }
     
-    /*
-    //raw image
-    for(int col = 0; col < 50; col++) {
-        for(int row = 49; row >= 0; row--) {
-            ostringstream left_raw_mem;
-            if(int(left_image.at<uint8_t>(row, col)) >= 16) {
-                left_raw_mem << std::hex << '0' << int(left_image.at<uint8_t>(row, col));
-                left_raw_mem_file << left_raw_mem.str() << " ";
-            } else {
-                left_raw_mem << std::hex << '0' << '0' << int(left_image.at<uint8_t>(row, col));
-                left_raw_mem_file << left_raw_mem.str() << " ";
-            }
-        }
-        left_raw_mem_file << endl;
-    }
-    for(int col = 0; col < 50; col++) {
-        for(int row = 49; row >= 0; row--) {
-            ostringstream right_raw_mem;
-            if(int(right_image.at<uint8_t>(row, col)) >= 16) {
-                right_raw_mem << std::hex << '0' << int(right_image.at<uint8_t>(row, col));
-                right_raw_mem_file << right_raw_mem.str() << " ";
-            } else {
-                right_raw_mem << std::hex << '0' << '0' << int(right_image.at<uint8_t>(row, col));
-                right_raw_mem_file << right_raw_mem.str() << " ";
-            }
-        }
-        right_raw_mem_file << endl;
-    }
-    */
-    
-    //image mem
-    /*
-    for(int col = 0; col < 50; col++) {
-        for(int row = 49; row >= 0 ; row--) {
-            ostringstream left_mem_0;
-            ostringstream left_mem_1;
-            if(row % 2 == 0){
-                if(int(left_image.at<uint8_t>(row, col)) >= 16) {
-                    left_mem_0 << std::hex << '0' << int(left_image.at<uint8_t>(row, col));
-                    left_mem_0_file << left_mem_0.str();
-                } else { 
-                    left_mem_0 << std::hex << '0' << '0' << int(left_image.at<uint8_t>(row, col));
-                    left_mem_0_file << left_mem_0.str();
-                }
-            } else {
-                if(int(left_image.at<uint8_t>(row, col)) >= 16) {
-                    left_mem_1 << std::hex << '0' << int(left_image.at<uint8_t>(row, col));
-                    left_mem_1_file << left_mem_1.str();
-                } else { 
-                    left_mem_1 << std::hex << '0' << '0' << int(left_image.at<uint8_t>(row, col));
-                    left_mem_1_file << left_mem_1.str();
-                }
-            }
-        }
-        left_mem_0_file << endl;
-        left_mem_1_file << endl;
-    }
-
-    for(int col = 0; col < 50; col++) {
-        for(int row = 49; row >= 0 ; row--) {
-            ostringstream right_mem_0;
-            ostringstream right_mem_1;
-            if(row % 2 == 0){
-                if(int(right_image.at<uint8_t>(row, col)) >= 16) {
-                    right_mem_0 << std::hex << '0' << int(right_image.at<uint8_t>(row, col));
-                    right_mem_0_file << right_mem_0.str();
-                } else { 
-                    right_mem_0 << std::hex << '0' << '0' << int(right_image.at<uint8_t>(row, col));
-                    right_mem_0_file << right_mem_0.str();
-                }
-            } else {
-                if(int(right_image.at<uint8_t>(row, col)) >= 16) {
-                    right_mem_1 << std::hex << '0' << int(right_image.at<uint8_t>(row, col));
-                    right_mem_1_file << right_mem_1.str();
-                } else { 
-                    right_mem_1 << std::hex << '0' << '0' << int(right_image.at<uint8_t>(row, col));
-                    right_mem_1_file << right_mem_1.str();
-                }
-            }
-        }
-        right_mem_0_file << endl;
-        right_mem_1_file << endl;
-    }
-    left_mem_0_file.close();
-    left_mem_1_file.close();
-    right_mem_0_file.close();
-    right_mem_1_file.close();
-    */
     left_raw_mem_file.close();
     right_raw_mem_file.close();
 }
@@ -1100,12 +916,6 @@ void error_measure(Mat &Confidence, Mat &disparity, Mat &Ground_truth, Mat &outl
     for (int row = 128; row < Ground_truth.rows; row++){
         for (int col = 128; col < Ground_truth.cols; col++){
             if(Ground_truth.at<uint8_t>(row, col) != 0) {
-                //cout << "row: " << row << ", col: " << col << endl;
-                //cout << "gt: " << (int)Ground_truth.at<uint8_t>(row, col) << endl;
-                //cout << "disp: " << (int)disparity.at<uint8_t>(row, col) << endl;
-
-                //if((int)Confidence.at<uint8_t>(row, col) > 6){
-                    //cout << "difference: " << difference << endl;
                     int difference = (int)disparity.at<uint8_t>(row, col) - (int)Ground_truth.at<uint8_t>(row, col);
                     if(difference > 0) {
                         error = error + difference;
@@ -1138,7 +948,6 @@ void error_measure(Mat &Confidence, Mat &disparity, Mat &Ground_truth, Mat &outl
                         confident_valid_num++;
                     }
                     valid_num++;
-                //}
                 num++;
             }    
         }
@@ -1148,7 +957,6 @@ void error_measure(Mat &Confidence, Mat &disparity, Mat &Ground_truth, Mat &outl
     outliners = (float)error_num/(float)valid_num;
     confident_outliners = (float)confident_error_num/(float)confident_valid_num;
     cout << "total: " << num << ", valid_num: " << valid_num << ", error_num: " << error_num << ", outliners: " << outliners << ", average error: " << error << endl; 
-    //cout << "confident: total: " << num << ", valid_num: " << confident_valid_num << ", error_num: " << confident_error_num << ", outliners: " << confident_outliners << ", average error: " << confident_error << endl; 
     
     return;
 }
@@ -1162,8 +970,6 @@ void distance_error_measure(Mat &Confidence, Mat &disparity, Mat &Ground_truth){
     for (int row = 0; row < Ground_truth.rows; row++){
         for (int col = 0; col < Ground_truth.cols; col++){
             if((int)Ground_truth.at<uint8_t>(row, col) != 0) {
-                //if((int)Confidence.at<uint8_t>(row, col) > 6){
-                //cout << "difference: " << difference << endl;
                 if(disparity.at<uint8_t>(row, col) != 0){
                     float gt_dist = 1/(float)Ground_truth.at<uint8_t>(row, col);
                     float dist = 1/(float)disparity.at<uint8_t>(row, col);
@@ -1187,7 +993,6 @@ void distance_error_measure(Mat &Confidence, Mat &disparity, Mat &Ground_truth){
         }
     }
     error_counter = pow(error_counter, 1.0/valid_num);
-    //outliners = (float)error_num/(float)valid_num;
     cout << "total: " << num << ", valid_num: " << valid_num << ", avg_dist_error: " << error_counter << endl; 
     return;
 }
@@ -1257,7 +1062,6 @@ uint8_t find_S_min_3(uint64_t S[], int maxdisp, int min_1, int min_2){
 
 uint64_t find_min(uint64_t A, uint64_t B, uint64_t C, uint64_t D){
     uint64_t min = A;
-    //cout << "A: " << A << ", B: " << B << ", C: " << C << ", D: " << D << endl;
     if ((int)min > (int)B) {
         min = B;
     }
@@ -1274,22 +1078,17 @@ uint64_t find_min(uint64_t A, uint64_t B, uint64_t C, uint64_t D){
 
 Mat census_trans (Mat A, int kernel_size) {
     Mat result = Mat::zeros(A.rows, A.cols, DataType<uint64_t>::type);
-    //Mat tmp = Mat::zeros(kernel_size, kernel_size, DataType<int>::type);
     int half_window = (kernel_size - 1)/2;
     for (int row = 0; row < A.rows; row++) {
         for (int col = 0; col < A.cols; col++) {
-            //cout << "processing : " << row << ", " << col << endl;
             for (int row_w = -1 * half_window; row_w <= half_window; row_w++) {
                 for (int col_w = -1 * half_window; col_w <= half_window; col_w++) {
                     if(row_w != 0 || col_w != 0) {
                         if ((row + row_w < A.rows) && (col + col_w < A.cols) && (row + row_w >= 0) && (col + col_w >= 0)) { 
                             if (A.at<uint8_t>(row + row_w, col + col_w) < A.at<uint8_t>(row, col)) {
-                                //cout << "shift" << (row_w + half_window) * kernel_size + col_w + half_window << " for " << row + row_w << ", " << col + col_w << endl;
                                 result.at<uint64_t>(row,col) = (uint64_t)(result.at<uint64_t>(row, col) | ((uint64_t) 1 << ((row_w + half_window) * kernel_size + col_w + half_window)));
-                                //tmp.at<int>(row_w + half_window; col_w + half_window) = 1; 
                             }
                             else {
-                                //tmp.at<int>(row_w + half_window; col_w + half_window) = 0; 
                             }
                         }
                         else {
@@ -1321,14 +1120,6 @@ void readIntrinsics(string filename, Mat cameraMatrix[2], Mat distCoeffs[2]){
     n = fs["D2"];
     n >> distCoeffs[1];
     fs.release();
-   
-    /*
-    fs.open("out0.yml", FileStorage::WRITE);
-    if(!fs.isOpened())
-        cout << filename << "open failed!" << endl;
-    fs << "M1" << cameraMatrix[0] << "D1" << distCoeffs[0] << "M2" << cameraMatrix[1] << "D2" << distCoeffs[1];
-    fs.release();
-    */
 }
 
 void readExtrinsics(string filename, Mat& R, Mat& T, Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q){
@@ -1361,26 +1152,18 @@ void StereoCalib(Size imageSize, Rect validRoi[2], Mat rmap[2][2])
     int i, j, k;
 
     Mat cameraMatrix[2], distCoeffs[2];
-    //cout << "1" << endl;
     string fsIn = "intrinsics.yml";
 
     readIntrinsics(fsIn, cameraMatrix, distCoeffs);
-    
-    //cout << "2" << endl;
     Mat R, T, R1, R2, P1, P2, Q;
     string fsEx = "extrinsics.yml";
     readExtrinsics(fsEx, R, T, R1, R2, P1, P2, Q);
-    //cout << "3" << endl;
     stereoRectify(cameraMatrix[0], distCoeffs[0],
                   cameraMatrix[1], distCoeffs[1],
                   imageSize, R, T, R1, R2, P1, P2, Q,
                   CALIB_ZERO_DISPARITY, 1, imageSize, &validRoi[0], &validRoi[1]);
-
-    //cout << "4" << endl;
     initUndistortRectifyMap(cameraMatrix[0], distCoeffs[0], R1, P1, imageSize, CV_16SC2, rmap[0][0], rmap[0][1]);
     initUndistortRectifyMap(cameraMatrix[1], distCoeffs[1], R2, P2, imageSize, CV_16SC2, rmap[1][0], rmap[1][1]);
-
-    //cout << "5" << endl;
 }
 
 struct Object {
@@ -1402,21 +1185,6 @@ void CapImage(int image_num, Size imageSize, Rect validRoi[2], Mat rmap[2][2], M
     newcanvas.create(imageSize.height, imageSize.width * 2, CV_8UC3);
     int w = imageSize.width;
     int h = imageSize.height;
-    
-    //capture realtime images
-
-    //**********************************************/
-    //TO USE ZED CAMERA, UNCOMMENT HERE
-    
-    
-    /*
-    VideoCapture cap(1);
-    if(!cap.isOpened()){
-        cout << "camera not open" << endl;
-        return;
-    }
-    */
-    
 
     Mat realImage;
     
@@ -1426,35 +1194,8 @@ void CapImage(int image_num, Size imageSize, Rect validRoi[2], Mat rmap[2][2], M
     for(i = 0; i < image_num; i++)
     {
         Mat frame;
-        /********************************************/
-        //TO USE ZED CAMERA, UNCOMMENT HERE
-        
-        /*
-        cap >> frame;
-
-        //imwrite("captured.png", frame);
-        cvtColor(frame.clone(), frame, CV_BGR2GRAY);
-
-        Mat left_read(frame, Range::all(), Range(0, cols/2));
-        Mat right_read(frame, Range::all(), Range(cols/2, cols));
-        
-        #ifdef WRITE_FILE
-        imwrite("left_read.png", left_read);
-        imwrite("right_read.png", right_read);
-        #endif
-        */
-        
-
-        /**************************************************/
-        //TO USE PREPARED IMAGES, UNCOMMENT HERE
-        
-        //Mat left_read = imread("left1015.png", 0);
-        //Mat right_read = imread("right1015.png", 0);
-        
-
         Mat left_gray = Mat::zeros(left_read.rows, left_read.cols, DataType<uint8_t>::type);
-      
-
+   
         for( k = 0; k < 2; k++ )
         {
             Mat img;
@@ -1467,12 +1208,7 @@ void CapImage(int image_num, Size imageSize, Rect validRoi[2], Mat rmap[2][2], M
                     left_gray.at<uint8_t>(row, col) = img.at<uint8_t>(row, col);      
                 }
             }
-            //imwrite("left_gray.png", left_gray);
-            
-
-            remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
-            
-            
+            remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);   
             cimg = rimg.clone();
             
             Mat canvasPart = newcanvas(Rect(w*k, 0, w, h));
@@ -1490,9 +1226,7 @@ void CapImage(int image_num, Size imageSize, Rect validRoi[2], Mat rmap[2][2], M
             {
                 Rect vroi(validRoi[k].x, validRoi[k].y, validRoi[k].width, validRoi[k].height);
                 rectangle(canvasPart, vroi, Scalar(0,0,255), 3, 8);
-            }
-
-            
+            } 
         }
        
         if(waitKey(30) >= 0) break;
@@ -1512,14 +1246,8 @@ void* CapImage_helper(void *obj) {
         return NULL;
 }
 
-
-
-
-
 int main () {
 
-
-    //buffer.reserve(438515);
     pthread_t threads_0;
     pthread_t threads_1;//transfer thread
     pthread_t threads_2;//capture thread
@@ -1547,14 +1275,7 @@ int main () {
     float total_time = 0;
     float write_time = 0;
     #endif
-
-   // VideoWriter out_capture("images_JPL/depth_video_input.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
-  //  VideoWriter out_capture_left("images_JPL/depth_video_input_left.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
-  //  VideoWriter out_capture_right("images_JPL/depth_video_input_right.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
-
-    //clock_t main_start = clock();
     struct timeval main_start, main_end;
-
 
     //streaming out
     int err;
@@ -1615,25 +1336,32 @@ int main () {
     Size imageSize(640, 480); 
     Rect validRoi[2];
     Mat rmap[2][2];
-
- 
-    left_read = imread("left1.png", 0);
-    right_read = imread("right1.png", 0);
-
-
+    int cols=1280;
+    Mat frame;
+    VideoCapture cap(1);  //zed camera
+    if(!cap.isOpened()){
+	cout << "camera not open" <<endl;
+	return 0;
+    }
+    //cap >> frame;
+    //cvtColor(frame.clone(), frame, CV_BGR2GRAY);
+   // Mat left_image_1(frame, Range::all(), Range(0, cols/2));
+    //Mat right_image_1(frame, Range::all(), Range(cols/2, cols));
+   // imwrite("zed_left.png",left_image_1);
+    //imwrite("zed_right.png",right_image_1);
+    //left_read = imread("left1.png", 0);
+    //right_read = imread("right1.png", 0);
+    //left_read(frame, Range::all(), Range(0, cols/2));
+    //right_read(frame, Range::all(), Range(cols/2, cols));
+    
     StereoCalib(imageSize, validRoi, rmap);
     int x = MAX(validRoi[0].x, validRoi[1].x);
     int y = MAX(validRoi[0].y, validRoi[1].y);
+    int x_end = MIN(validRoi[0].x+validRoi[0].width, validRoi[1].x+validRoi[1].width);
+    int y_end = MIN(validRoi[0].y+validRoi[0].height, validRoi[1].y+validRoi[1].height);
     int width = MIN(validRoi[0].x+validRoi[0].width, validRoi[1].x+validRoi[1].width) - x;
     int height = MIN(validRoi[0].y+validRoi[0].height, validRoi[1].y+validRoi[1].height) - y;
-
-
-    //cout << validRoi[0].x << " " << validRoi[0].y << endl;
-    Mat left(480, 640, DataType<uint8_t>::type);
-    Mat right(480, 640, DataType<uint8_t>::type);
-    Mat left_cap(480, 640, DataType<uint8_t>::type);
-    Mat right_cap(480, 640, DataType<uint8_t>::type);
-    
+   // cout<<"x"<<x<<"y"<<y<<"x_end"<<x_end<<"y_end"<<y_end<<endl;
     int imageCounter;
     #ifdef WRITE_FILE
     char vector_file_name[1024];
@@ -1642,25 +1370,9 @@ int main () {
     sprintf(vector_file_name, "vector_file_continuous.txt");
     vector_file.open(vector_file_name, fstream::out);
     #endif
-
    
     int image_mem_even = 0;
     int result_mem_even = 0;
-
-    /*
-    printf("\n-------------------------------------------------------------------------------------------------");  
-    printf("\nThis function is for testing the bulk transfers. It will write on OUT endpoint");
-    printf("\n-------------------------------------------------------------------------------------------------");      
-    */
-    /*
-    //detect the bulkloop is running from VID/PID 
-    err = libusb_get_device_descriptor(device, &desc);
-    if (err < 0) 
-    {
-        printf("\n\tFailed to get device descriptor for the device, returning");
-        return;
-    }
-    */
 
 	if(get_ep_info())
 	{
@@ -1677,7 +1389,6 @@ int main () {
     }
 
     int usb_speed = libusb_get_device_speed (device);
-    //printf("\n current usb speed is: %d", usb_speed);
 
     //creat a thread for transfer
     irets[1] = pthread_create(&threads_1, NULL, &streamOUT_transfer_parallel, NULL);
@@ -1698,10 +1409,9 @@ int main () {
     int     col_counter = 0;
         
     int     start_image = 120;
-    //VideoCapture leftcapture("depth_video_input_left.avi");
-    //VideoCapture rightcapture("depth_video_input_right.avi");
-    for(imageCounter = 0; imageCounter < 240; imageCounter++){
+    for(imageCounter = 0; imageCounter < 2000; imageCounter++){
         
+        cap >> frame;  //capture from zed camera
         //reset chip
         if(imageCounter == 0) {
             GPIO_init();
@@ -1720,23 +1430,42 @@ int main () {
             sprintf(left_image_string, "flyer/flyer_4/000%d_rect_l.png", imageCounter + start_image);
             sprintf(right_image_string, "flyer/flyer_4/000%d_rect_r.png", imageCounter + start_image);
         }
-
-        //cout << "image: " << imageCounter << endl;
         _count = 0;
 
         #ifdef MEASURE_DETAIL
         clock_t total_start = clock();
         clock_t cap_start = clock();
         #endif
-	//Mat left_image;
-        //Mat right_image;
-	//leftcapture >> left_image;
-	//rightcapture >> right_image;
-        Mat left_image = imread(left_image_string, CV_LOAD_IMAGE_GRAYSCALE);
-        Mat right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
-        //Mat left_image = imread(left_image_string, CV_LOAD_IMAGE_ANYDEPTH);
-        //Mat right_image = imread(right_image_string, CV_LOAD_IMAGE_ANYDEPTH);
+        //Mat left_image = imread(left_image_string, CV_LOAD_IMAGE_GRAYSCALE);
+        //Mat right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
+        cvtColor(frame, frame, CV_BGR2GRAY);
+       // cout<<"clone done"<<"frame_row"<<frame.rows<<"frame_cols"<<frame.cols<<"y"<<y<<"y_end"<<y_end<<"x"<<x<<"x_end"<<x_end<<"cols/2+x"<<cols/2+x<<endl;
+	Mat left_image_raw(frame, Range::all(), Range(0, cols/2));
+	Mat right_image_raw(frame, Range::all(), Range(cols/2, cols));
+	//Mat left_image_raw= imread("left1.png");
+	//Mat right_image_raw=imread("right1.png");
+	left_read= left_image_raw.clone();
+	right_read= right_image_raw.clone();
+	CapImage(image_num, imageSize, validRoi, rmap, left_read, right_read);
+	Rect region(x, y, width, height);
+	Mat left_image(left_read, region);
+	Mat right_image(right_read, region);
+	//remap(left_image_raw, left_image_raw, rmap[k][0], rmap[k][1], INTER_LINEAR);
+	//remap(right_image_raw, right_image_raw, rmap[k][0], rmap[k][1], INTER_LINEAR);
+        imshow("left_image_raw",left_read);
+	imshow("right_image_raw",right_read);
+	//Mat left_image(left_image_raw, Range(y,y_end), Range(x, x_end));
+	//Mat right_image(right_image_raw, Range(y,y_end), Range(x, x_end));
 
+	//Size size(752,480);
+	//resize(left_image,left_image, size);
+	//resize(right_image, right_image, size);
+	//left_image = imread(left_image_string, CV_LOAD_IMAGE_GRAYSCALE);
+	//right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
+	imshow("left_image",left_image);
+	imshow("right_image",right_image);
+        waitKey(1);
+	//cout<<"initial image done"<<endl;
         cv::Mat imageGrey;
         cv::Mat imageArr[] = {left_image, left_image, left_image};
         cv::merge(imageArr, 3, imageGrey);
@@ -1911,7 +1640,8 @@ int main () {
                     #endif
                     even = 1;
                 }
-    
+    		//imshow("sub_right_gray",sub_right_gray);
+		//waitKey(1);
                 #ifdef MEASURE_DETAIL
                 clock_t block_end_2 = clock();
                 block_time_2 += (float)(block_end_2 - block_start_2)/CLOCKS_PER_SEC;

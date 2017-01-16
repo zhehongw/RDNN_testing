@@ -35,6 +35,8 @@ elif [ $test == "50_generate_2_image_usb_vector_1024_buffer" ]; then
 	g++ -ggdb `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename scanned_ESGN_$1.c .c` stream_usb_vector_1024_buffer.c scanned_ESGN_$1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0`
 elif [ $test == "JPL_flyer_test" ]; then
     g++ -O3 -lpthread `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename scanned_ESGN_$1.c .c` stream_usb_vector_1024_buffer.c scanned_ESGN_$1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0 ` -lpthread
+elif [ $test == "JPL_flyer_test_zed" ]; then
+    g++ -O3 -lpthread `pkg-config --cflags opencv` `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename scanned_ESGN_$1.c .c` stream_usb_vector_1024_buffer.c scanned_ESGN_$1.c `pkg-config --libs opencv` `pkg-config --libs libusb-1.0 ` -lpthread
 elif [ $test == "stream_in_to_file" ]; then
 	g++ -ggdb `pkg-config --cflags libusb-1.0` -std=c++11 -o `basename $1.c .c` $1.c `pkg-config --libs libusb-1.0`
 elif [ $test == "stream_in_demo" ]; then

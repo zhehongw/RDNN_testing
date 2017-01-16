@@ -14,23 +14,15 @@
 #include <sys/time.h>
 #include "bulkloopapp.h"
 #include "stream_usb_vector.h"
-//
 #include "opencv/cv.h"
-//#include "cxcore.h"
-//#include "highgui.h"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-//#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-
 #include <opencv2/opencv.hpp>
 #include <pthread.h>
-
-//#define MEASURE_DETAIL
 #define WITH_BUFFER 
-//#define WRITE_FILE  
 
 using namespace std;
 using namespace cv;
@@ -170,7 +162,8 @@ void write_vectr_file_start(){
     to_buffer(0b11000010000000000000000000001010);//P1 10
     to_buffer(0b11000011000000000000000001100100);//P2 100
     to_buffer(0b11000100000000000000000000110001);//max_local_costs 49
-    to_buffer(0b11000101000000000000001111101000);//max_global_costs 1000//800
+    //to_buffer(0b11000101000000000000001111101000);//max_global_costs 1000//800
+    to_buffer(0b11000101000000000000001100100000);//max_global_costs 1000//800
     to_buffer(0b11000110000000000000000100101100);//average_cost 500//300
     to_buffer(0b11000111000000000000000000000000);//window_index 0
     to_buffer(0b11001000000000000000000000000000);//max_disp_index 0
@@ -179,7 +172,7 @@ void write_vectr_file_start(){
     //to_buffer(0b11001001000000000000011110000000);//max_img_size 1920
     //to_buffer(0b11001001000000000000011100000010);//max_img_size 1794
     //SD
-    to_buffer(0b11001010000000000000000000001111);//"SD1
+    to_buffer(0b11001010000000000000000000001100);//"SD1
     to_buffer(0b11001011000000000000000000001000);//"SD2
     to_buffer(0b11001100000000000000000000001000);//"SD3
     to_buffer(0b11001101000000000000000000010010);//"SD4
@@ -1418,25 +1411,6 @@ void CapImage(int image_num, Size imageSize, Rect validRoi[2], Mat rmap[2][2], M
         
         
         
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
-        cap >> frame;
         cap >> frame;
 
         //imwrite("captured.png", frame);
