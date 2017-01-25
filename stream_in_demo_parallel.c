@@ -50,6 +50,8 @@ int transffered_bytes_parallel=0;
 int transffered_bytes_tmp=0;
 unsigned char in_data_buf_parallel[1024 * 8];
 unsigned char buffer_parallel[1024 * 8];
+
+VideoWriter out_capture("images_JPL/depth_video_output.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
 int i;
     int usr_choice,data_byte;
     //unsigned char in_data_buf[512];
@@ -647,6 +649,7 @@ int streamIN_transfer_to_display_process()
                             Mat dispMap_right_flip(dispMap, Range(row_num, 2*row_num), Range::all());
                             Mat dispMap_right;
                             flip(dispMap_right_flip, dispMap_right, 1);
+                            Mat dispMap_LRcheck_raw = Mat::zeros(row_num, col_num, DataType<uint8_t>::type);
                             Mat dispMap_LRcheck = Mat::zeros(row_num, col_num, DataType<uint8_t>::type);
                             Mat dispMap_left_copied = dispMap_left.clone();
                             Mat dispMap_right_copied = dispMap_right.clone();
@@ -663,13 +666,44 @@ int streamIN_transfer_to_display_process()
                                         consistency.at<uint8_t>(row, col) = 255;
                                     }
                                     if(consistency.at<uint8_t>(row, col) < LR_threshold){
-                                        dispMap_LRcheck.at<uint8_t>(row, col) = dispMap.at<uint8_t>(row, col);
+                                        dispMap_LRcheck_raw.at<uint8_t>(row, col) = dispMap.at<uint8_t>(row, col);
                                     }
                                     else{
-                                        dispMap_LRcheck.at<uint8_t>(row, col) = 255;
+                                        dispMap_LRcheck_raw.at<uint8_t>(row, col) = 255;
                                     }
                                 }
                             }
+	    for(int row = 0; row < row_num; row++){
+            for(int col = 0; col < col_num; col++){
+                int up_distance = 10;
+                int down_distance = 10;
+                if(dispMap_LRcheck_raw.at<uint8_t>(row, col) == 255){ //fill pixels
+                    for(up_distance = 0; up_distance < 5; up_distance++) {
+                        if(row-up_distance>0 && dispMap_LRcheck_raw.at<uint8_t>(row-up_distance, col) != 255) {
+                            break;
+                        }
+                    }
+                    for(down_distance = 0; down_distance < 5; down_distance++) {
+                        if(row+down_distance<row_num && dispMap_LRcheck_raw.at<uint8_t>(row+down_distance, col) != 255) {
+                            break;
+                        }
+                    }
+                    if (up_distance < down_distance && up_distance < 5) {
+                        dispMap_LRcheck.at<uint8_t>(row, col) = dispMap_LRcheck_raw.at<uint8_t>(row-up_distance, col);
+                    } else if (up_distance > down_distance && down_distance < 5) {
+                        dispMap_LRcheck.at<uint8_t>(row, col) = dispMap_LRcheck_raw.at<uint8_t>(row+down_distance, col);
+                    } else if (up_distance == down_distance && down_distance < 5 && up_distance < 5) {
+                        dispMap_LRcheck.at<uint8_t>(row, col) = (uint8_t)((int)dispMap_LRcheck_raw.at<uint8_t>(row-up_distance, col) + (int)dispMap_LRcheck_raw.at<uint8_t>(row+down_distance, col))/2;
+                    } else {
+                        dispMap_LRcheck.at<uint8_t>(row, col) = 255;
+                    }
+                } else {
+                    dispMap_LRcheck.at<uint8_t>(row, col) = dispMap_LRcheck_raw.at<uint8_t>(row, col);
+                }
+            }
+	    }
+
+
                             Mat dispMap_LR_check_color;
                             Mat dispMap_LR_check_scaled = Mat::zeros(dispMap_LRcheck.rows, dispMap_LRcheck.cols, DataType<uint8_t>::type);
                             Mat dispMap_color = Mat::zeros(2 * dispMap.rows, dispMap.cols, DataType<uint8_t>::type);
@@ -708,13 +742,16 @@ int streamIN_transfer_to_display_process()
                                     }
                                 }
                             }
+
  
                             medianBlur(dispMap_LR_check_scaled, dispMap_medianfilter, 5);
                             applyColorMap(dispMap_medianfilter, dispMap_LR_check_color, COLORMAP_RAINBOW);
                             dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
 
-                            imshow("depth", dispMap_LR_check_color);
-                            waitKey(1);
+                            //imshow("depth", dispMap_LR_check_color);
+                            //waitKey(1);
+
+                            out_capture.write(dispMap_LR_check_color);
 		
                             sub_row = 0;
                             sub_col = 0;
@@ -727,6 +764,7 @@ int streamIN_transfer_to_display_process()
                             dispMap_left.release();
                             dispMap_right.release();                    
                             consistency.release();
+                            dispMap_LRcheck_raw.release();
                             dispMap_LRcheck.release();
                             dispMap_LR_check_scaled.release();
 
