@@ -1338,7 +1338,7 @@ int main () {
     Mat rmap[2][2];
     int cols=1280;
     Mat frame;
-    VideoCapture cap(1);  //zed camera
+    VideoCapture cap(0);  //zed camera
     if(!cap.isOpened()){
 	cout << "camera not open" <<endl;
 	return 0;
