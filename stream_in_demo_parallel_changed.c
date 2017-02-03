@@ -29,7 +29,7 @@
 
 using namespace std;
 using namespace cv;
-
+VideoWriter out_capture;
 //handle of selected device to work on
 libusb_device *device;
 libusb_device_handle *dev_handle;
@@ -506,7 +506,7 @@ void show_image(){
 	    Mat consistency = Mat::zeros(row_num, col_num, DataType<uint8_t>::type);
 
 	    //LR check
-	    int LR_threshold = 4;
+	    int LR_threshold = 2;
 	    for(int row = 0; row < row_num; row++){
             for(int col = 0; col < col_num; col++){
                 if(col - dispMap_left_copied.at<uint8_t>(row, col) < col_num && col - dispMap_left_copied.at<uint8_t>(row, col) >= 0){
@@ -576,7 +576,7 @@ void show_image(){
 		    }
 
 		    //tmp = (int) 16 * (tmp - Min);
-		    tmp = (int) 2*tmp;
+		    tmp = (int) 3*tmp;
 
 		    if(0 < dispMap_LRcheck.at<uint8_t>(row, col) && dispMap_LRcheck.at<uint8_t>(row, col) < 255) { 
 		        if(tmp < 255) {
@@ -600,6 +600,7 @@ void show_image(){
 	    dispMap_LR_check_color.convertTo(dispMap_LR_check_color, CV_8UC3, 255.0);
 
 	    imshow("depth", dispMap_LR_check_color);
+	//out_capture.write(dispMap_LR_check_color);
 	    //imshow("depth", dispMap_copy);
 	    waitKey(1);
 
@@ -855,6 +856,7 @@ void  streamIN_transfer_to_display()
 
 int main()
 {
+	out_capture.open("images_JPL/depth_video_input.avi", CV_FOURCC('M','J','P','G'), 30, Size(752,480));
     //namedWindow("depth");
     int err;
     int usr_choice;

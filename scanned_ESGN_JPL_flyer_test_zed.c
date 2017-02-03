@@ -1409,7 +1409,7 @@ int main () {
     int     col_counter = 0;
         
     int     start_image = 120;
-    for(imageCounter = 0; imageCounter < 2000; imageCounter++){
+    for(imageCounter = 0; imageCounter < 20000; imageCounter++){
         
         cap >> frame;  //capture from zed camera
         //reset chip
@@ -1417,7 +1417,7 @@ int main () {
             GPIO_init();
         }
 
-        char left_image_string[1024];
+       /* char left_image_string[1024];
         char right_image_string[1024];
 
         if(imageCounter + start_image < 10) {
@@ -1429,7 +1429,7 @@ int main () {
         } else {
             sprintf(left_image_string, "flyer/flyer_4/000%d_rect_l.png", imageCounter + start_image);
             sprintf(right_image_string, "flyer/flyer_4/000%d_rect_r.png", imageCounter + start_image);
-        }
+        }*/
         _count = 0;
 
         #ifdef MEASURE_DETAIL
@@ -1466,7 +1466,7 @@ int main () {
 	//right_image = imread(right_image_string, CV_LOAD_IMAGE_GRAYSCALE);
 	//imshow("left_image",left_image);
 	//imshow("right_image",right_image);
-        waitKey(1);
+       // waitKey(1);
 	//cout<<"initial image done"<<endl;
         cv::Mat imageGrey;
         cv::Mat imageArr[] = {left_image, left_image, left_image};
