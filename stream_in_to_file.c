@@ -390,15 +390,16 @@ void  streamIN_transfer_to_file()
     int i;
     int usr_choice,data_byte;
     int transffered_bytes; //actual transffered bytes
-    unsigned char in_data_buf[1024 * 8];
+    unsigned char in_data_buf[1024 * 16];
     //unsigned char in_data_buf[512];
     unsigned char in_row_buf[4];
     int index;
     struct libusb_device_descriptor desc;
     unsigned char enum_glInEpNum=0;
 
-    ofstream ofs;
-    ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
+    //ofstream ofs;
+    //ofs.open("streamIN_bin.txt", ios::out | ios::binary); // write as txt
+    //ofs.open("streamIN.txt", "w"); // write as txt
 
     printf("\n-------------------------------------------------------------------------------------------------");  
     printf("\nThis function is for testing the bulk transfers. It will read from IN endpoint");
@@ -428,7 +429,7 @@ void  streamIN_transfer_to_file()
         return;
     }
 
-    //FILE *f = fopen("streamIN_binary.txt", "wb");
+    FILE *f = fopen("streamIN.txt", "w");
 
     int last_addr;
     int write_frame;
@@ -440,7 +441,7 @@ void  streamIN_transfer_to_file()
         //printf("\nTransfering %d bytes from TARGET(Bulkloop device) -> HOST(PC)", glInMaxPacketSize);
         //for(enum_glInEpNum = 0; enum_glInEpNum < 32; enum_glInEpNum = enum_glInEpNum+1){
         //err = libusb_bulk_transfer(dev_handle,enum_glInEpNum,in_data_buf,glInMaxPacketSize,&transffered_bytes,100);
-        err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*8,&transffered_bytes,0);
+        err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,glInMaxPacketSize*16,&transffered_bytes,0);
         //err = libusb_bulk_transfer(dev_handle,glInEpNum,in_data_buf,512,&transffered_bytes,100000);
         if(err)
         {
@@ -465,59 +466,59 @@ void  streamIN_transfer_to_file()
             in_row_buf[3 - index] = in_data_buf[i]; 
             //fprintf_binary(f, in_data_buf[i]);
 
-            if(index == 3) {
-                uint32_t data =  (uint32_t)in_data_buf[i] << 24 & 0xFF000000| 
-                        (uint32_t)in_data_buf[i-1] << 16 & 0x00FF0000| 
-                        (uint32_t)in_data_buf[i-2] << 8 & 0x0000FF00| 
-                        (uint32_t)in_data_buf[i-3] & 0x000000FF;
-                bitset<32> data_bin(data);
-                
-                int header = (data & 0xFE000000) >> 25;
-                int addr = (data & 0x01FFE000) >> 13;
+            //if(index == 3) {
+            //    uint32_t data =  (uint32_t)in_data_buf[i] << 24 & 0xFF000000| 
+            //            (uint32_t)in_data_buf[i-1] << 16 & 0x00FF0000| 
+            //            (uint32_t)in_data_buf[i-2] << 8 & 0x0000FF00| 
+            //            (uint32_t)in_data_buf[i-3] & 0x000000FF;
+            //    bitset<32> data_bin(data);
+            //    
+            //    int header = (data & 0xFE000000) >> 25;
+            //    int addr = (data & 0x01FFE000) >> 13;
 
-                if(last_addr > 2490 && addr > 50 && addr < last_addr) {
-                    write_frame = 1;
-                    last_addr = 0;
-                        //ofs << "addr: " << addr << endl;
-                        //ofs << "last_addr: " << last_addr << endl;
-                } else if(last_addr > 2490 && addr > 5 && addr < last_addr && addr < 50) {
-                    write_frame = 0;
-                    last_addr = 0;
-                        //ofs << "addr: " << addr << endl;
-                        //ofs << "last_addr: " << last_addr << endl;
-                }
-                if (write_frame) {
-                //if (write_frame) {
-                //if (ofs) {
-                    // easy way, use the stream insertion operator
-                    //ofs << data_bin << endl;
-                    ofs.write((char*)&data, sizeof(uint32_t));
-		    //fwrite(data, 1, sizeof(unsigned long), f);
-                    //	ofs << header << endl;
-                    //	ofs << addr << endl;
-                    //	ofs << write_frame << endl;
-                }
-		last_addr = addr;
-	    }
+            //    if(last_addr > 2490 && addr > 50 && addr < last_addr) {
+            //        write_frame = 1;
+            //        last_addr = 0;
+            //            //ofs << "addr: " << addr << endl;
+            //            //ofs << "last_addr: " << last_addr << endl;
+            //    } else if(last_addr > 2490 && addr > 5 && addr < last_addr && addr < 50) {
+            //        write_frame = 0;
+            //        last_addr = 0;
+            //            //ofs << "addr: " << addr << endl;
+            //            //ofs << "last_addr: " << last_addr << endl;
+            //    }
+            //    if (write_frame) {
+            //    //if (write_frame) {
+            //    //if (ofs) {
+            //        // easy way, use the stream insertion operator
+            //        //ofs << data_bin << endl;
+            //        ofs.write((char*)&data, sizeof(uint32_t));
+            //        //fwrite(data, 1, sizeof(unsigned long), f);
+            //        //	ofs << header << endl;
+            //        //	ofs << addr << endl;
+            //        //	ofs << write_frame << endl;
+            //    }
+            //    last_addr = addr;
+            //}
 
-	    /*
+	    
             if(index == 3) {
                 
-                fprintf_binary(f, in_data_buf[i]);
-                fprintf_binary(f, in_data_buf[i-1]);
-                fprintf_binary(f, in_data_buf[i-2]);
-                fprintf_binary(f, in_data_buf[i-3]);
-                fprintf(f, "\n");
+                //if(in_data_buf[i] & 0x80 != 0x80) {
+                    fprintf_binary(f, in_data_buf[i]);
+                    fprintf_binary(f, in_data_buf[i-1]);
+                    fprintf_binary(f, in_data_buf[i-2]);
+                    fprintf_binary(f, in_data_buf[i-3]);
+                    fprintf(f, "\n");
+                //}
 
             }
-	    */
-
         }
     }
 
      //printf("\n\n------------------------------------------------------------------------------------------------------------------\n\n");     
-     //fclose(f);
-     ofs.close();
+     fclose(f);
+     //ofs.close();
 
      //release the interface claimed earlier
      err = libusb_release_interface (dev_handle, 0);     

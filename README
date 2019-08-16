@@ -1,18 +1,18 @@
-stereo vision test software
+stereo vision board interface software
 
-Requirements:
+Package Requirements:
 Opencv 3.1.0 (run install.sh to install opencv 3.1.0)
 libusb-1.0 
 cyusb_linux (can be installed on Cypress websit)
 
 
-test:
+ZED camera depth test:
 
 #compile a software to block image and send image blocks out via usb 3.0 interface
-1.bash compile.sh 50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+1. bash compile.sh JPL_flyer_test_zed_HD
 
 #compile a software to listen to another usb ports to read processed data
-2.bash compile.sh stream_in_to_file
+2. bash compile.sh stream_in_demo_parallel_changed_HD
  
 3. connect motherboard, daughterboard with 2 usb cables
 
@@ -20,10 +20,10 @@ test:
 
 5. program FX3 with cyusb software, FX3 image is provided in FX3_img folder
 
-6. run stream_in_to_file, select usb bus and number
+6. run stream_in_demo_parallel_changed_HD, select usb bus and number
 
-7. run scanned_ESGN_50_generate_2_image_usb_vector_ZE_VGA_LR_1024_buffer_parallel
+7. run scanned_ESGN_JPL_flyer_test_zed_HD
 
-8. a Stream_IN.txt should be generated
+8. a window should pop up with depth
 
 
