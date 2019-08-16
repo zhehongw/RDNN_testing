@@ -1,0 +1,10 @@
+input_activation:
+output_activation:
+input_channel:
+output_channel:
+kernel_size:
+stride:
+
+
+
+

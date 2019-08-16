@@ -1,0 +1,8 @@
+diff dump_shared_oa_0_0.mem conv1_ia_shared_0_0.mem
+diff dump_shared_oa_0_1.mem conv1_ia_shared_0_1.mem
+diff dump_shared_oa_1_0.mem conv1_ia_shared_1_0.mem
+diff dump_shared_oa_1_1.mem conv1_ia_shared_1_1.mem
+diff dump_shared_oa_2_0.mem conv1_ia_shared_2_0.mem
+diff dump_shared_oa_2_1.mem conv1_ia_shared_2_1.mem
+diff dump_shared_oa_3_0.mem conv1_ia_shared_3_0.mem
+diff dump_shared_oa_3_1.mem conv1_ia_shared_3_1.mem
