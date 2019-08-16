@@ -24,27 +24,14 @@ extern libusb_device_handle *dev_handle;
 extern struct libusb_device_descriptor desc_main;
 
 
-//extern array<char, 1754060> buffer;
-//extern array<char, 1024> buffer;
-//extern array<char, 1350000> buffer; VGA
-//extern array<char, 10800000> buffer;
-//extern array<char, 21600000> buffer;//work
-//extern array<unsigned char, 1024> buffer;
-//
-extern pthread_mutex_t transfer_lock;
-extern pthread_cond_t transfer_cond;
-extern pthread_mutex_t prepare_lock;
-extern pthread_cond_t prepare_cond;
-extern pthread_mutex_t cap_lock;
-extern pthread_cond_t cap_cond;
-extern pthread_mutex_t process_lock;
-extern pthread_cond_t process_cond;
 extern unsigned char buffer[1024 * 16];
-extern unsigned char transfer_buffer[1024 * 16];
-extern bool transfer_buffer_prepared;
-extern bool cap_buffer_prepared;
+//extern unsigned char transfer_buffer[1024 * 16];
+//extern pthread_mutex_t transfer_lock;
+//extern pthread_cond_t transfer_cond;
+//extern pthread_mutex_t prepare_lock;
+//extern pthread_cond_t prepare_cond;
+//extern bool transfer_buffer_prepared;
 
- 
 extern unsigned char glInEpNum;
 extern unsigned char glOutEpNum;
 extern unsigned int  glInMaxPacketSize;
@@ -80,7 +67,7 @@ void  *GPIO_write(void *);
 
 void  streamOUT_transfer();
 
-void  *streamOUT_transfer_parallel(void *);
+//void  *streamOUT_transfer_parallel(void *);
 
 void  streamIN_transfer();
 

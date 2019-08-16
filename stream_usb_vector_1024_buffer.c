@@ -8,26 +8,18 @@ using namespace std;
 
 libusb_device *device;
 libusb_device_handle *dev_handle;
-struct libusb_device_descriptor desc_main;
-
+struct libusb_device_descriptor main_desc;
 
 //array<char, 1754060> buffer;
 //array<char, 1350000> buffer;
 //array<unsigned char, 1024> buffer;
 unsigned char buffer[1024 * 16];
-unsigned char transfer_buffer[1024 * 16];
-pthread_mutex_t transfer_lock;
-pthread_cond_t transfer_cond;
-bool transfer_buffer_prepared=0;
-pthread_mutex_t prepare_lock;
-pthread_cond_t prepare_cond;
-pthread_mutex_t cap_lock;
-pthread_cond_t cap_cond;
-pthread_mutex_t process_lock;
-pthread_cond_t process_cond;
-bool cap_buffer_prepared;
-
-
+//unsigned char transfer_buffer[1024 * 16];
+//pthread_mutex_t transfer_lock;
+//pthread_cond_t transfer_cond;
+//bool transfer_buffer_prepared=0;
+//pthread_mutex_t prepare_lock;
+//pthread_cond_t prepare_cond;
 
 unsigned char glInEpNum=0;
 unsigned char glOutEpNum=0;
@@ -317,7 +309,8 @@ void  GPIO_init()
     //detect the bulkloop is running from VID/PID 
     //device_info();
     
-    err = libusb_get_device_descriptor(device, &desc);
+    
+    err = libusb_get_device_descriptor(device, &main_desc);
     if (err < 0) 
     {
         printf("\n\tFailed to get device descriptor for the device, returning");
@@ -337,6 +330,7 @@ void  GPIO_init()
         printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
         return;
     }
+    
 
     /*
     int libusb_control_transfer     (   libusb_device_handle *      dev_handle,
@@ -349,7 +343,8 @@ void  GPIO_init()
                                         unsigned int    timeout 
                                         )   
     */
-    
+
+    printf("\nfifo reset: \n");
     data[1] = 0x01;
     //GPIO program
     //bit 7: LIBUSB_ENDPOINT_OUT
@@ -377,6 +372,7 @@ void  GPIO_init()
         #endif
     }
 
+    printf("\nreset: \n");
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
@@ -399,11 +395,12 @@ void  GPIO_init()
         #endif
     }
 
+    printf("\nmux reset: \n");
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
                                     0x0000,//data
-                                    0x0004,//ENABLE
+                                    0x0004,//MUX_RESET
                                     data,
                                     1,
                                     1000 
@@ -421,11 +418,12 @@ void  GPIO_init()
         #endif
     }
 
+    printf("\nenable: \n");
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
                                     0x0000,//data
-                                    0x0001,//DEBUG
+                                    0x0001,//ENABLE
                                     data,
                                     1,
                                     1000 
@@ -443,6 +441,7 @@ void  GPIO_init()
         #endif
     }
 
+    printf("\next clk: \n");
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
@@ -465,7 +464,6 @@ void  GPIO_init()
         #endif
     }
 
-    /*
     //release the interface claimed earlier
     err = libusb_release_interface (dev_handle, 0);     
     if(err)
@@ -473,17 +471,20 @@ void  GPIO_init()
         printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
         return;
     }
-    */
-    //fclose(f);
 
+    printf("\nreset finish: \n");
+    
+    //fclose(f);
+    return;
 }
 
+//void GPIO_write()
 void* GPIO_write(void *)
 {
     int err;
     int i;
     int usr_choice,data_byte;
-    struct libusb_device_descriptor desc;
+    //struct libusb_device_descriptor desc;
     int index;
     unsigned char data[1];
     /*
@@ -494,17 +495,20 @@ void* GPIO_write(void *)
     //detect the bulkloop is running from VID/PID 
     //device_info();
     
-    err = libusb_get_device_descriptor(device, &desc);
+    
+    err = libusb_get_device_descriptor(device, &main_desc);
     if (err < 0) 
     {
         printf("\n\tFailed to get device descriptor for the device, returning");
         return NULL;
+        //return;
     }
 
 	if(get_ep_info())
 	{
 		printf("\n can not get EP Info; returning");
         return NULL;
+        //return;
 	}
   
     // While claiming the interface, interface 0 is claimed since from our bulkloop firmware we know that. 
@@ -513,7 +517,9 @@ void* GPIO_write(void *)
     {
         printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
         return NULL;
+        //return;
     }
+    
 
     /*
     int libusb_control_transfer     (   libusb_device_handle *      dev_handle,
@@ -532,9 +538,33 @@ void* GPIO_write(void *)
     //bit 7: LIBUSB_ENDPOINT_OUT
     //bit 5-6: LIBUSB_REQUEST_TYPE_VENDOR 
     //bit 0-4: LIBUSB_RECIPIENT_DEVICE
+    //
+    //1. release clock MUX
+    err = libusb_control_transfer   (dev_handle,
+                                    (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
+                                    0xC2,
+                                    0x0001,//data
+                                    0x0004,//MUX_RESET
+                                    data,
+                                    1,
+                                    1000 
+                                    );
+    #ifdef DISPLAY
+    printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
+    #endif
+    if(err < 0)
+    {
+        printf("\ncannot toggle GPIO because of err: %d\n", err);
+        return NULL;
+        //return;
+    } else {
+        #ifdef DISPLAY
+        printf("\nGPIO written\n");
+        #endif
+    }
 
     usleep(1000000);
-    //1. release chip reset
+    //2. release chip reset
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
@@ -551,6 +581,7 @@ void* GPIO_write(void *)
     {
         printf("\ncannot toggle GPIO because of err: %d\n", err);
         return NULL;
+        //return;
     } else {
         #ifdef DISPLAY
         printf("\nGPIO written\n");
@@ -558,7 +589,7 @@ void* GPIO_write(void *)
     }
 
     usleep(1000000);
-    //2. release asynchronous fifo
+    //3. release asynchronous fifo
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
@@ -575,68 +606,69 @@ void* GPIO_write(void *)
     {
         printf("\ncannot toggle GPIO because of err: %d\n", err);
         return NULL;
+        //return;
     } else {
         #ifdef DISPLAY
         printf("\nGPIO written\n");
         #endif
     }
 
-    usleep(1000000);
-    //3. set to debug mode
-    err = libusb_control_transfer   (dev_handle,
-                                    (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
-                                    0xC2,
-                                    0x0001,//data
-                                    0x0001,//DEBUG
-                                    data,
-                                    1,
-                                    1000 
-                                    );
-    #ifdef DISPLAY
-    printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
-    #endif
-    if(err < 0)
-    {
-        printf("\ncannot toggle GPIO because of err: %d\n", err);
-        return NULL;
-    } else {
-        #ifdef DISPLAY
-        printf("\nGPIO written\n");
-        #endif
-    }
+    usleep(4000000);
+    ////4. set to debug mode
+    //err = libusb_control_transfer   (dev_handle,
+    //                                (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
+    //                                0xC2,
+    //                                0x0001,//data
+    //                                0x0001,//DEBUG
+    //                                data,
+    //                                1,
+    //                                1000 
+    //                                );
+    //#ifdef DISPLAY
+    //printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
+    //#endif
+    //if(err < 0)
+    //{
+    //    printf("\ncannot toggle GPIO because of err: %d\n", err);
+    //    return NULL;
+    //} else {
+    //    #ifdef DISPLAY
+    //    printf("\nGPIO written\n");
+    //    #endif
+    //}
 
-    //delay until initialization finish
-    usleep(2000000);
-    
-    //4. release debug
-    err = libusb_control_transfer   (dev_handle,
-                                    (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
-                                    0xC2,
-                                    0x0000,//data
-                                    0x0001,//DEBUG
-                                    data,
-                                    1,
-                                    1000 
-                                    );
-    #ifdef DISPLAY
-    printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
-    #endif
-    if(err < 0)
-    {
-        printf("\ncannot toggle GPIO because of err: %d\n", err);
-        return NULL;
-    } else {
-        #ifdef DISPLAY
-        printf("\nGPIO written\n");
-        #endif
-    }
+    ////delay until initialization finish
+    //usleep(2000000);
+    //
+    ////4. release debug
+    //err = libusb_control_transfer   (dev_handle,
+    //                                (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
+    //                                0xC2,
+    //                                0x0000,//data
+    //                                0x0001,//DEBUG
+    //                                data,
+    //                                1,
+    //                                1000 
+    //                                );
+    //#ifdef DISPLAY
+    //printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
+    //#endif
+    //if(err < 0)
+    //{
+    //    printf("\ncannot toggle GPIO because of err: %d\n", err);
+    //    return NULL;
+    //} else {
+    //    #ifdef DISPLAY
+    //    printf("\nGPIO written\n");
+    //    #endif
+    //}
 
-    usleep(1000000);
+    //usleep(1000000);
     //5. select internal clk
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
-                                    0x0001,//data
+                                    0x0001,//0001 data
                                     0x0000,//EXT_CLK_SEL
                                     data,
                                     1,
@@ -649,19 +681,30 @@ void* GPIO_write(void *)
     {
         printf("\ncannot toggle GPIO because of err: %d\n", err);
         return NULL;
+        //return;
     } else {
         #ifdef DISPLAY
         printf("\nGPIO written\n");
         #endif
     }
 
-    usleep(1000000);
-    //enable SGM processing
+    usleep(100000);
+    
+    //release the interface claimed earlier
+    err = libusb_release_interface (dev_handle, 0);     
+    if(err)
+    {
+        printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
+        return NULL;
+        //return;
+    }
+
+    //6. select enable
     err = libusb_control_transfer   (dev_handle,
                                     (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
                                     0xC2,
                                     0x0001,//data
-                                    0x0004,//ENABLE
+                                    0x0001,//ENABLE
                                     data,
                                     1,
                                     1000 
@@ -673,74 +716,68 @@ void* GPIO_write(void *)
     {
         printf("\ncannot toggle GPIO because of err: %d\n", err);
         return NULL;
+        //return;
     } else {
         #ifdef DISPLAY
         printf("\nGPIO written\n");
         #endif
     }
 
-    /*
+    usleep(1500000);
+    //2. reset chip
+    err = libusb_control_transfer   (dev_handle,
+                                    (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE),
+                                    0xC2,
+                                    0x0001,//data
+                                    0x0003,//RESET
+                                    data,
+                                    1,
+                                    1000 
+                                    );
+    #ifdef DISPLAY
+    printf("bm: %d\n", (LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE));
+    #endif
+    if(err < 0)
+    {
+        printf("\ncannot toggle GPIO because of err: %d\n", err);
+        return NULL;
+        //return;
+    } else {
+        #ifdef DISPLAY
+        printf("\nGPIO written\n");
+        #endif
+    }
+
+    usleep(1000000);
+    
     //release the interface claimed earlier
     err = libusb_release_interface (dev_handle, 0);     
     if(err)
     {
         printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
-        return;
+        return NULL;
+        //return;
     }
-    */
-    //fclose(f);
-    return NULL;
 
-}
-
-void* streamOUT_transfer_parallel(void *)
-{
-    int err;
-    int transffered_bytes; //actual transffered bytes
-    while (1) {
-        transffered_bytes = 0;
-        pthread_mutex_lock(&transfer_lock);
-        while(!transfer_buffer_prepared) {
-            pthread_cond_wait(&transfer_cond, &transfer_lock);
-        }
-        pthread_mutex_lock(&prepare_lock);
-        while(1){
-            err = libusb_bulk_transfer(dev_handle,glOutEpNum,transfer_buffer,glOutMaxPacketSize * 16,&transffered_bytes,0);  
-            if(err)
-            {
-            } else {
-                transfer_buffer_prepared = false;
-                pthread_cond_signal(&prepare_cond);
-                pthread_mutex_unlock(&prepare_lock);
-                pthread_mutex_unlock(&transfer_lock);
-                break;
-            }
-        }
-    }
     return NULL;
+    //return ;
+
 }
 
 void  streamOUT_transfer()
 {
     int err;
-    int i;
-    int usr_choice,data_byte;
     int transffered_bytes; //actual transffered bytes
-    //unsigned char out_data_buf[512];
-    unsigned char out_data_buf[1024];
-    unsigned char temp_buf[4];
-    //struct libusb_device_descriptor desc;
-    int index;
-    /*
+    
     printf("\n-------------------------------------------------------------------------------------------------");  
     printf("\nThis function is for testing the bulk transfers. It will write on OUT endpoint");
     printf("\n-------------------------------------------------------------------------------------------------");      
-    */
+    
     //detect the bulkloop is running from VID/PID 
 
     //write inn main
-    /*
-    err = libusb_get_device_descriptor(device, &desc);
+    
+    err = libusb_get_device_descriptor(device, &main_desc);
     if (err < 0) 
     {
         printf("\n\tFailed to get device descriptor for the device, returning");
@@ -760,158 +797,133 @@ void  streamOUT_transfer()
         printf("\nThe device interface is not getting accessed, HW/connection fault, returning");
         return;
     }
-    */
-
-
+    
     //Create a buffer of users choice
 
-    /*
     printf("\n----------------------------------------------------------------------------------------------");  
     printf("\nfill buffer with data from file\n");
-    */
 
-    //FILE *infile = fopen("input_datastream/stixel_1/vector_file_000976.txt", "rb");
-    //char *line = NULL;
-    //char reverse_line[32];
-    //size_t len = 0;
-    //ssize_t read_err;
+    FILE *infile = fopen("scripts/resnet_test/USB_inst.txt", "r");
+    FILE *outfile = fopen("streamOUT.txt", "w");
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read_err;
 
-    //int loc;
-    //char word_1[8], word_2[8], word_3[8], word_4[8];
+    int loc;
 
-    //int packet_count = 0;
-
-    //FILE *f = fopen("streamOUT.txt", "wb");
-    /*
+    //buffer[1024 * 16] = '\0';
     while(1){
-        //fread(out_data_buf,1024, 1, fileptr);
-        for(index = 0; index < 1024; index=index+4) {
-        //for(index = 0; index < 512; index=index+4) {
+        for(int index = 0; index < 1024 * 16; index=index+4) {
 
-            //read_err = getline(&line, &len, infile);
-            
-            //if(1024 * packet_count + 1024 > 1350000) {
-            //    return;
-            //}
-            
-            if(1024 * packet_count + 1024 > 1024) {
-                return;
-            }
+            if(index >= 256 && index < 1024 * 16 - 256) {
+                //printf("%d\n", index);
+                read_err = getline(&line, &len, infile);
 
-            // for( i = 0; i < 32; i++) {
-            //     reverse_line[i] = line[31-i];
-            // }
-            //if(index == 0) cout << line << endl;
-            if(read_err == -1){
-                //printf("\nfile end reached, transffred bytes : %d",transffered_bytes); 
-                //release the interface claimed earlier
-                err = libusb_release_interface (dev_handle, 0);     
-                if(err)
-                {
-                    printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
+                //printf("\n%s\n", line);
+                
+                // for( i = 0; i < 32; i++) {
+                //     reverse_line[i] = line[31-i];
+                // }
+
+                if(read_err == -1){
+                    printf("\nfile end reached\n"); 
+                    //release the interface claimed earlier
+                    err = libusb_release_interface (dev_handle, 0);     
+                    if(err)
+                    {
+                        printf("\nThe device interface is not getting released, if system hangs please disconnect the device, returning");
+                        return;
+                    }
+                    fclose(infile);
                     return;
                 }
-                //fclose(f);
-                return;
+                
+                //if(index == 0) cout << line << endl;
+                //cout << line << endl;
+                char word_1[9], word_2[9], word_3[9], word_4[9];
+                for(loc = 0; loc < 8; loc++){
+                    word_1[loc] = line[loc];
+                    word_2[loc] = line[loc + 8];
+                    word_3[loc] = line[loc + 16];
+                    word_4[loc] = line[loc + 24];
+                }
+                word_1[8] = '\0';
+                word_2[8] = '\0';
+                word_3[8] = '\0';
+                word_4[8] = '\0';
+
+                //cout << word_4 << "; " << word_3 << "; " << word_2 << "; " << word_1 << endl;
+                
+                //printf_binary(line);
+                unsigned char c_1 = (unsigned char)(strtol(word_1, 0, 2) & 0xFF);
+                unsigned char c_2 = (unsigned char)(strtol(word_2, 0, 2) & 0xFF);
+                unsigned char c_3 = (unsigned char)(strtol(word_3, 0, 2) & 0xFF);
+                unsigned char c_4 = (unsigned char)(strtol(word_4, 0, 2) & 0xFF);
+                //if(index == 0){
+                //printf("\n%d\t%d\t%d\t%d\n", c_1, c_2, c_3, c_4);
+                //}
+                buffer[index] = c_4;
+                buffer[index+1] = c_3;
+                buffer[index+2] = c_2;
+                buffer[index+3] = c_1;
+
+                //printf_binary(buffer[index+3]);
+                //printf_binary(buffer[index+2]);
+                //printf_binary(buffer[index+1]);
+                //printf_binary(buffer[index+0]);
+                //printf("\n");
+
+                //fprintf_binary(outfile, buffer[index+3]);
+                //fprintf_binary(outfile, buffer[index+2]);
+                //fprintf_binary(outfile, buffer[index+1]);
+                //fprintf_binary(outfile, buffer[index+0]);
+
+                //fprintf(outfile, "\n");
+            } else {
+                buffer[index] = (unsigned char)0x72;
+                buffer[index+1] = (unsigned char)0x01;
+                buffer[index+2] = (unsigned char)0x00;
+                buffer[index+3] = (unsigned char)0xC2;
             }
-            // for(loc = 0; loc < 8; loc++){
-            //     word_1[loc] = line[loc];
-            //     word_2[loc] = line[loc + 8];
-            //     word_3[loc] = line[loc + 16];
-            //     word_4[loc] = line[loc + 24];
-            // }
-            
-            //printf_binary(line);
-            // unsigned char c_1 = strtol(word_1, 0, 2);
-            // unsigned char c_2 = strtol(word_2, 0, 2);
-            // unsigned char c_3 = strtol(word_3, 0, 2);
-            // unsigned char c_4 = strtol(word_4, 0, 2);
-            //if(index == 0){
-            //    printf("%d\t%d\t%d\t%d\n", c_1, c_2, c_3, c_4);
-            //}
-            //printf("inserting %d\t%d\t%d\t%d\n", 1024 * packet_count + index + 0, 1024 * packet_count + index + 1, 1024 * packet_count + index + 2, 1024 * packet_count + index + 3);
-            #ifdef WITH_BUFFER
-            out_data_buf[index] = buffer[1024 * packet_count + index + 0];
-            out_data_buf[index+1] = buffer[1024 * packet_count + index + 1];
-            out_data_buf[index+2] = buffer[1024 * packet_count + index + 2];
-            out_data_buf[index+3] = buffer[1024 * packet_count + index + 3];
-            #else
-            out_data_buf[index] = 0xF;
-            out_data_buf[index+1] = 0xF;
-            out_data_buf[index+2] = 0xF;
-            out_data_buf[index+3] = 0xF;
-            #endif
-
-            
-            //if(packet_count == 0 && index < 64){
-            //    for(int k = 0; k < 4; k++){
-            //        cout << bitset<8>((int)(out_data_buf[index+k])) << " ";
-            //    }
-            //    cout << endl;
-            //}
-          
-
-
-            //if(index == 0){
-            //    for(int k = 0; k < 4; k++){
-            //        printf("%d\t", out_data_buf[k]);
-            //    }
-            //}
         }
-        */
 
+        printf("\nbuffer prepared");
 
         transffered_bytes = 0;
-        //printf("\nTransffering %d bytes from HOST(PC) -> TARGET(Bulkloop device)", glOutMaxPacketSize);
+
+        printf("\nbuffer prepared again");
+
+        //usleep(1000000);
+
         while(1){
+
+            printf("\nbuffer prepared again again");
+            //cout << glOutMaxPacketSize << endl;
+            //printf("\nTransffering %d bytes from HOST(PC) -> TARGET(Bulkloop device)", glOutMaxPacketSize);
             //err = libusb_bulk_transfer(dev_handle,glOutEpNum,out_data_buf,glOutMaxPacketSize,&transffered_bytes,1000000000); 
-            err = libusb_bulk_transfer(dev_handle,glOutEpNum,buffer,glOutMaxPacketSize,&transffered_bytes,1000); 
+            err = libusb_bulk_transfer(dev_handle,glOutEpNum,buffer,glOutMaxPacketSize * 16,&transffered_bytes,0);  
             //err = libusb_bulk_transfer(dev_handle,glOutEpNum,out_data_buf,512,&transffered_bytes,1000000000); 
             if(err)
             {
-                //printf("\nBytes transffres failed, err: %d transffred bytes : %d",err,transffered_bytes); 
+                printf("\nBytes transffres failed, err: %d transffred bytes : %d",err,transffered_bytes); 
                 //return;
             } else {
                 
-                //for(i=0; i < (int)transffered_bytes; i++){
-                //    printf("%d\t",out_data_buf[i]);
-                //    index = i%4;
-                //    if(index == 0) {
-                //        temp_buf[0] = out_data_buf[i];
-                //    } else if(index == 1) {
-                //        temp_buf[1] = out_data_buf[i];
-                //    } else if(index == 2) {
-                //        temp_buf[2] = out_data_buf[i];
-                //    } else if(index == 3) {
-                //        temp_buf[3] = out_data_buf[i];
-                //        fprintf_binary(f, temp_buf[3]);
-                //        fprintf_binary(f, temp_buf[2]);
-                //        fprintf_binary(f, temp_buf[1]);
-                //        fprintf_binary(f, temp_buf[0]);
-                //    }
-
-                //    if(index == 3) {
-                //        fprintf(f, "\n");
-                //    }
-                //}
-                
-                //printf("\nTransffred bytes : %d",transffered_bytes); 
+                printf("\nTransffred bytes : %d",transffered_bytes); 
                 break;
             }
         }
         
-        //printf("\n\n-------------------------------------------------------------------------------------------------------------");
-        //printf("\n\nStreamOUT transfers completed successfully:");
-        //printf("\nData Transffered: %d bytes \n\n", transffered_bytes);
-
+        printf("\n\n-------------------------------------------------------------------------------------------------------------");
+        printf("\n\nStreamOUT transfers completed successfully:");
+        printf("\nData Transffered: %d bytes \n\n", transffered_bytes);
 
         //for(i=0; i < (int)transffered_bytes; i++)
-        //    printf("%d\t",out_data_buf[i]);
+        //    printf("%d\t",buffer[i]);
         //printf("\n\n-------------------------------------------------------------------------------------------------------------\n\n"); 
 
-        //packet_count++;
         //printf("new package\n");
-    //}
+    }
 }
 
 void  streamIN_transfer()
@@ -923,7 +935,7 @@ void  streamIN_transfer()
     unsigned char in_data_buf[1024];
     unsigned char in_row_buf[4];
     int index;
-    struct libusb_device_descriptor desc;
+    //struct libusb_device_descriptor desc;
     unsigned char enum_glInEpNum=0;
 	
 
@@ -932,7 +944,7 @@ void  streamIN_transfer()
     printf("\n-------------------------------------------------------------------------------------------------");      
 
     //detect the bulkloop is running from VID/PID 
-    err = libusb_get_device_descriptor(device, &desc);
+    err = libusb_get_device_descriptor(device, &main_desc);
     if (err < 0) 
     {
         printf("\n\tFailed to get device descriptor for the device, returning");
@@ -1005,5 +1017,32 @@ void  streamIN_transfer()
         return;
      }
 }
+
+//void* streamOUT_transfer_parallel(void *)
+//{
+//    int err;
+//    int transffered_bytes; //actual transffered bytes
+//    while (1) {
+//        transffered_bytes = 0;
+//        pthread_mutex_lock(&transfer_lock);
+//        while(!transfer_buffer_prepared) {
+//            pthread_cond_wait(&transfer_cond, &transfer_lock);
+//        }
+//        pthread_mutex_lock(&prepare_lock);
+//        while(1){
+//            err = libusb_bulk_transfer(dev_handle,glOutEpNum,transfer_buffer,glOutMaxPacketSize * 16,&transffered_bytes,0);  
+//            if(err)
+//            {
+//            } else {
+//                transfer_buffer_prepared = false;
+//                pthread_cond_signal(&prepare_cond);
+//                pthread_mutex_unlock(&prepare_lock);
+//                pthread_mutex_unlock(&transfer_lock);
+//                break;
+//            }
+//        }
+//    }
+//    return NULL;
+//}
 
 #endif
