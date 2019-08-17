@@ -42,15 +42,27 @@ write_rram_mem(arch.RRAM_words, arch.RRAM_words_full)
 write_inst_mem()
 #USB_init_RRAM_all()
 
-cycle = 100
-#for k in range(0,16):
+cycle = 20000
+offset = 100
+for j in range(0, 24):
+    for i in range (0, cycle):
+        USB_init_RRAM_word_conv(15, 0, offset, j)
+        USB_init_RRAM_word_conv(15, 1, offset, j)
+        USB_init_RRAM_word_conv(15, 2, offset, j)
+        USB_init_RRAM_word_conv(15, 3, offset, j)
+        USB_init_RRAM_word_conv(15, 4, offset, j)
+        USB_init_RRAM_word_conv(15, 5, offset, j)
+        for i in range(0, 5):
+            USB_dummy_short()
+
+#for k in range(4, 8):
 #    line = '0' * k + '1' + '0' * (96 - k - 1)
 #    for j in range(0, cycle):
-#        USB_init_RRAM_word(15, 2, 10508, line)
+#        USB_init_RRAM_word(0, 2, 10512, line)
 #        for i in range(0, 5):
 #            USB_dummy_short()
 #    USB_dummy_short()
-#    cycle = cycle + 100
+#    cycle = cycle + 100000
 
 #line = '0' * 5 + '1' + '0' * (96 - 5 - 1)
 #for j in range(0, cycle):
@@ -62,10 +74,14 @@ for i in range(0, 64):
     USB_dummy_short()
 
 for i in range(0, 1000):
+    for b_idx in range(0, 6): 
+        for j in range(0, 24):
+            addr = offset + j
+            USB_read_RRAM(15, b_idx, addr, addr, 0)
+            USB_dummy_short_read()
 
-    USB_dummy_short()
-    USB_read_RRAM(15, 2, 10508, 10508, 0)
-
+    #USB_dummy_short()
+    #USB_read_RRAM(15, 2, 10508, 10508, 0)
     #USB_read_RRAM(2, 0, 8260, 8260, 0)
     #USB_dummy_short()
     #USB_read_RRAM(2, 0, 8513, 8513, 0)
